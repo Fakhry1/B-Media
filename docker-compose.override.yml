@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  bmedia-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=bmedia_db;Username=bmedia_user;Password=bmedia_pass;
+      - ConnectionStrings__Redis=redis:6379,password=redis_pass
+      - Jwt__SecretKey=dev-secret-key-change-in-production-min-32-chars!!
+      - Jwt__Issuer=bmedia-api-dev
+      - Jwt__Audience=bmedia-clients-dev
+    ports:
+      - "5000:8080"
+    volumes:
+      - ./uploads:/app/uploads
+
+  postgres:
+    environment:
+      POSTGRES_DB: bmedia_db
+      POSTGRES_USER: bmedia_user
+      POSTGRES_PASSWORD: bmedia_pass
+
+  redis:
+    command: redis-server --requirepass redis_pass

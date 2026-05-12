@@ -1,0 +1,40 @@
+## .NET
+*.user
+*.suo
+.vs/
+bin/
+obj/
+*.log
+*.tmp
+
+## Sensitive
+.env
+appsettings.Production.json
+appsettings.Secrets.json
+secrets.json
+
+## Uploads (user-generated content)
+uploads/
+logs/
+
+## Test results
+TestResults/
+*.trx
+
+## NuGet
+*.nupkg
+.nuget/
+
+## Docker
+.dockerignore
+
+## JetBrains
+.idea/
+*.iml
+
+## VSCode
+.vscode/
+
+## Build
+*.publish/
+publish/

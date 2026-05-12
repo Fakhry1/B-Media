@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>BMedia.Domain</RootNamespace>
+    <AssemblyName>BMedia.Domain</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MediatR for IDomainEvent (INotification) -->
+    <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
+  </ItemGroup>
+
+</Project>
