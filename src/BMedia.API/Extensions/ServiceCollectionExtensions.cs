@@ -1,6 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
-using BMedia.Application.Common.Interfaces;
+using BMedia.Domain.Interfaces;
 using BMedia.Infrastructure.Services.Auth;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

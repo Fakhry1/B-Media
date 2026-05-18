@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using BMedia.Application.Common.Interfaces;
+using BMedia.Domain.Interfaces;
 
 namespace BMedia.API.Extensions;
 

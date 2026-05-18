@@ -1,4 +1,4 @@
-using BMedia.Application.Common.Interfaces;
+using BMedia.Domain.Interfaces;
 using BMedia.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;

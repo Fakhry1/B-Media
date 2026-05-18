@@ -1,4 +1,3 @@
-using BMedia.Application.Common.Interfaces;
 using BMedia.Application.Common.Models;
 using BMedia.Domain.Entities;
 using BMedia.Domain.Interfaces;

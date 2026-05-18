@@ -1,4 +1,4 @@
-namespace BMedia.Application.Common.Interfaces;
+namespace BMedia.Domain.Interfaces;
 
 public interface IDateTimeService
 {

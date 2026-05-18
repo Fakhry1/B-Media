@@ -1,4 +1,5 @@
 using BMedia.Domain.Interfaces;
+using BMedia.Infrastructure.BackgroundJobs;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 

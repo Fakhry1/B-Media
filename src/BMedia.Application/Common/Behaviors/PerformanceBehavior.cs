@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using BMedia.Application.Common.Interfaces;
+using BMedia.Domain.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
 

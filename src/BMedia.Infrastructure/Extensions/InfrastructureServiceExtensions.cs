@@ -1,4 +1,3 @@
-using BMedia.Application.Common.Interfaces;
 using BMedia.Domain.Interfaces;
 using BMedia.Infrastructure.BackgroundJobs;
 using BMedia.Infrastructure.Persistence;
