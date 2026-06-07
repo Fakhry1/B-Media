@@ -9,10 +9,12 @@ using BMedia.Infrastructure.Services.Notification;
 using BMedia.Infrastructure.Services.Search;
 using BMedia.Infrastructure.Services.Storage;
 using Hangfire;
+using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace BMedia.Infrastructure.Extensions;
 
@@ -20,6 +22,9 @@ public static class InfrastructureServiceExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var env = services.BuildServiceProvider().GetService<IHostEnvironment>();
+        bool isDevelopment = env?.IsDevelopment() ?? true;
+
         // EF Core
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
@@ -29,24 +34,35 @@ public static class InfrastructureServiceExtensions
                 npgsql =>
                 {
                     npgsql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorCodesToAdd: null);
+                    npgsql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
                 });
             options.UseSnakeCaseNamingConvention();
         });
 
-        // Redis
+        // Redis — use in-memory distributed cache in Development if Redis is unavailable
         services.AddStackExchangeRedisCache(opt =>
         {
             opt.Configuration = configuration.GetConnectionString("Redis");
             opt.InstanceName = "BMedia:";
         });
 
-        // Hangfire
-        services.AddHangfire(cfg => cfg
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))));
+        // Hangfire — InMemory in Development, PostgreSQL in Production
+        if (isDevelopment)
+        {
+            services.AddHangfire(cfg => cfg
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseMemoryStorage());
+        }
+        else
+        {
+            services.AddHangfire(cfg => cfg
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))));
+        }
         services.AddHangfireServer();
 
         // Auth services

@@ -1,18 +1,18 @@
 -- ============================================================
 -- BMedia — Complete Database Setup (Clean Slate)
--- Combines both EF migrations into one idempotent script.
--- Safe to run on any database — drops existing BMedia tables
--- first, then recreates everything in the correct final state.
---
--- After applying, EF Core will see both migrations as already
--- applied and will not try to run them again.
+-- Schema matches EF Core UseSnakeCaseNamingConvention() output.
+-- All table and column names are lowercase snake_case (unquoted).
+-- Tables that use PostgreSQL xmin system column for concurrency
+-- do NOT have a user-defined row_version column.
+-- Only audit_logs, content_workflow_histories, and refresh_tokens
+-- have an explicit row_version bigint column.
 -- ============================================================
 
 BEGIN;
 
 -- ============================================================
--- 0a. Drop all existing BMedia tables (safe on first run too)
---     CASCADE handles FK dependencies automatically.
+-- Drop all existing BMedia tables (both naming styles).
+-- Order matters: leaf tables first to avoid FK violations.
 -- ============================================================
 
 DROP TABLE IF EXISTS "AuditLogs"                CASCADE;
@@ -39,16 +39,15 @@ DROP TABLE IF EXISTS "Users"                    CASCADE;
 DROP TABLE IF EXISTS "Roles"                    CASCADE;
 DROP TABLE IF EXISTS "Permissions"              CASCADE;
 
--- Also clean up snake_case tables from any prior InitialCreate run
 DROP TABLE IF EXISTS audit_logs                  CASCADE;
 DROP TABLE IF EXISTS content_workflow_histories  CASCADE;
-DROP TABLE IF EXISTS content_tags                CASCADE;
 DROP TABLE IF EXISTS review_comments             CASCADE;
 DROP TABLE IF EXISTS notifications               CASCADE;
 DROP TABLE IF EXISTS scheduled_publications      CASCADE;
 DROP TABLE IF EXISTS attachments                 CASCADE;
 DROP TABLE IF EXISTS localizations               CASCADE;
 DROP TABLE IF EXISTS media_versions              CASCADE;
+DROP TABLE IF EXISTS content_tags                CASCADE;
 DROP TABLE IF EXISTS media_assets                CASCADE;
 DROP TABLE IF EXISTS contents                    CASCADE;
 DROP TABLE IF EXISTS workflow_transitions        CASCADE;
@@ -68,11 +67,12 @@ DROP TABLE IF EXISTS permissions                 CASCADE;
 DELETE FROM "__EFMigrationsHistory"
 WHERE "MigrationId" IN (
     '20260518000000_InitialCreate',
-    '20260520133335_InitialDatabase'
+    '20260520133335_InitialDatabase',
+    '20260520133336_InitialDatabase'
 );
 
 -- ============================================================
--- 0. EF Migrations history table
+-- EF Migrations history table
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
@@ -82,754 +82,755 @@ CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
 );
 
 -- ============================================================
--- 1. Roles
+-- 1. roles
 -- ============================================================
 
-CREATE TABLE "Roles" (
-    "Id"             uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"           character varying(100)   NOT NULL,
-    "NormalizedName" character varying(100)   NOT NULL,
-    "Description"    character varying(500),
-    "IsSystem"       boolean                  NOT NULL,
-    "CreatedAt"      timestamp with time zone NOT NULL,
-    "CreatedBy"      uuid,
-    "UpdatedAt"      timestamp with time zone,
-    "UpdatedBy"      uuid,
-    "IsDeleted"      boolean                  NOT NULL,
-    "DeletedAt"      timestamp with time zone,
-    "DeletedBy"      uuid,
-    CONSTRAINT "PK_Roles" PRIMARY KEY ("Id")
+CREATE TABLE roles (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name            character varying(100)   NOT NULL,
+    normalized_name character varying(100)   NOT NULL,
+    description     character varying(500),
+    is_system       boolean                  NOT NULL,
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_roles PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX "IX_Roles_NormalizedName"
-    ON "Roles" ("NormalizedName")
-    WHERE "IsDeleted" = false;
+CREATE UNIQUE INDEX ix_roles_normalized_name
+    ON roles (normalized_name)
+    WHERE is_deleted = false;
 
 -- ============================================================
--- 2. Permissions
+-- 2. permissions
 -- ============================================================
 
-CREATE TABLE "Permissions" (
-    "Id"             uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"           character varying(100)   NOT NULL,
-    "NormalizedName" character varying(100)   NOT NULL,
-    "Description"    character varying(500),
-    "Module"         character varying(100)   NOT NULL,
-    "CreatedAt"      timestamp with time zone NOT NULL,
-    "CreatedBy"      uuid,
-    "UpdatedAt"      timestamp with time zone,
-    "UpdatedBy"      uuid,
-    "IsDeleted"      boolean                  NOT NULL,
-    "DeletedAt"      timestamp with time zone,
-    "DeletedBy"      uuid,
-    CONSTRAINT "PK_Permissions" PRIMARY KEY ("Id")
+CREATE TABLE permissions (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name            character varying(100)   NOT NULL,
+    normalized_name character varying(100)   NOT NULL,
+    description     character varying(500),
+    module          character varying(100)   NOT NULL,
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_permissions PRIMARY KEY (id)
 );
 
-CREATE INDEX        "IX_Permissions_Module"         ON "Permissions" ("Module");
-CREATE UNIQUE INDEX "IX_Permissions_NormalizedName" ON "Permissions" ("NormalizedName") WHERE "IsDeleted" = false;
+CREATE INDEX        ix_permissions_module          ON permissions (module);
+CREATE UNIQUE INDEX ix_permissions_normalized_name ON permissions (normalized_name) WHERE is_deleted = false;
 
 -- ============================================================
--- 3. Users
+-- 3. users
 -- ============================================================
 
-CREATE TABLE "Users" (
-    "Id"                          uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Username"                    character varying(100)   NOT NULL,
-    "Email"                       character varying(256)   NOT NULL,
-    "PasswordHash"                text                     NOT NULL,
-    "FirstName"                   character varying(100)   NOT NULL,
-    "LastName"                    character varying(100)   NOT NULL,
-    "PhoneNumber"                 character varying(30),
-    "ProfilePictureUrl"           character varying(2048),
-    "IsActive"                    boolean                  NOT NULL DEFAULT true,
-    "IsEmailVerified"             boolean                  NOT NULL DEFAULT false,
-    "LastLoginAt"                 timestamp with time zone,
-    "LastLoginIp"                 text,
-    "FailedLoginAttempts"         integer                  NOT NULL DEFAULT 0,
-    "LockoutEnd"                  timestamp with time zone,
-    "EmailVerificationToken"      text,
-    "EmailVerificationTokenExpiry" timestamp with time zone,
-    "PasswordResetToken"          text,
-    "PasswordResetTokenExpiry"    timestamp with time zone,
-    "PreferredLanguage"           character varying(10)    NOT NULL DEFAULT 'en',
-    "TimeZone"                    character varying(100),
-    "CreatedAt"                   timestamp with time zone NOT NULL,
-    "CreatedBy"                   uuid,
-    "UpdatedAt"                   timestamp with time zone,
-    "UpdatedBy"                   uuid,
-    "IsDeleted"                   boolean                  NOT NULL,
-    "DeletedAt"                   timestamp with time zone,
-    "DeletedBy"                   uuid,
-    CONSTRAINT "PK_Users" PRIMARY KEY ("Id")
+CREATE TABLE users (
+    id                              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    username                        character varying(100)   NOT NULL,
+    email                           character varying(256)   NOT NULL,
+    password_hash                   text                     NOT NULL,
+    first_name                      character varying(100)   NOT NULL,
+    last_name                       character varying(100)   NOT NULL,
+    phone_number                    character varying(30),
+    profile_picture_url             character varying(2048),
+    is_active                       boolean                  NOT NULL DEFAULT true,
+    is_email_verified               boolean                  NOT NULL DEFAULT false,
+    last_login_at                   timestamp with time zone,
+    last_login_ip                   text,
+    failed_login_attempts           integer                  NOT NULL DEFAULT 0,
+    lockout_end                     timestamp with time zone,
+    email_verification_token        text,
+    email_verification_token_expiry timestamp with time zone,
+    password_reset_token            text,
+    password_reset_token_expiry     timestamp with time zone,
+    preferred_language              character varying(10)    NOT NULL DEFAULT 'en',
+    time_zone                       character varying(100),
+    created_at                      timestamp with time zone NOT NULL,
+    created_by                      uuid,
+    updated_at                      timestamp with time zone,
+    updated_by                      uuid,
+    is_deleted                      boolean                  NOT NULL,
+    deleted_at                      timestamp with time zone,
+    deleted_by                      uuid,
+    CONSTRAINT pk_users PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX "IX_Users_Email"    ON "Users" ("Email")    WHERE "IsDeleted" = false;
-CREATE UNIQUE INDEX "IX_Users_Username" ON "Users" ("Username") WHERE "IsDeleted" = false;
-CREATE INDEX        "IX_Users_IsDeleted" ON "Users" ("IsDeleted");
-CREATE INDEX        "IX_Users_IsActive"  ON "Users" ("IsActive");
+CREATE UNIQUE INDEX ix_users_email      ON users (email)      WHERE is_deleted = false;
+CREATE UNIQUE INDEX ix_users_username   ON users (username)   WHERE is_deleted = false;
+CREATE INDEX        ix_users_is_deleted ON users (is_deleted);
+CREATE INDEX        ix_users_is_active  ON users (is_active);
 
 -- ============================================================
--- 4. UserRoles
+-- 4. user_roles
 -- ============================================================
 
-CREATE TABLE "UserRoles" (
-    "UserId"     uuid                     NOT NULL,
-    "RoleId"     uuid                     NOT NULL,
-    "AssignedAt" timestamp with time zone NOT NULL,
-    "AssignedBy" uuid,
-    CONSTRAINT "PK_UserRoles" PRIMARY KEY ("UserId", "RoleId"),
-    CONSTRAINT "FK_UserRoles_Users_UserId"
-        FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_UserRoles_Roles_RoleId"
-        FOREIGN KEY ("RoleId") REFERENCES "Roles" ("Id") ON DELETE CASCADE
+CREATE TABLE user_roles (
+    user_id     uuid                     NOT NULL,
+    role_id     uuid                     NOT NULL,
+    assigned_at timestamp with time zone NOT NULL,
+    assigned_by uuid,
+    CONSTRAINT pk_user_roles PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_user_roles_users_user_id
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_roles_roles_role_id
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_UserRoles_UserId" ON "UserRoles" ("UserId");
-CREATE INDEX "IX_UserRoles_RoleId" ON "UserRoles" ("RoleId");
+CREATE INDEX ix_user_roles_role_id ON user_roles (role_id);
+CREATE INDEX ix_user_roles_user_id ON user_roles (user_id);
 
 -- ============================================================
--- 5. RolePermissions
+-- 5. role_permissions
 -- ============================================================
 
-CREATE TABLE "RolePermissions" (
-    "RoleId"       uuid                     NOT NULL,
-    "PermissionId" uuid                     NOT NULL,
-    "GrantedAt"    timestamp with time zone NOT NULL,
-    "GrantedBy"    uuid,
-    CONSTRAINT "PK_RolePermissions" PRIMARY KEY ("RoleId", "PermissionId"),
-    CONSTRAINT "FK_RolePermissions_Roles_RoleId"
-        FOREIGN KEY ("RoleId") REFERENCES "Roles" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_RolePermissions_Permissions_PermissionId"
-        FOREIGN KEY ("PermissionId") REFERENCES "Permissions" ("Id") ON DELETE CASCADE
+CREATE TABLE role_permissions (
+    role_id       uuid                     NOT NULL,
+    permission_id uuid                     NOT NULL,
+    granted_at    timestamp with time zone NOT NULL,
+    granted_by    uuid,
+    CONSTRAINT pk_role_permissions PRIMARY KEY (role_id, permission_id),
+    CONSTRAINT fk_role_permissions_roles_role_id
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_role_permissions_permissions_permission_id
+        FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_RolePermissions_PermissionId" ON "RolePermissions" ("PermissionId");
+CREATE INDEX ix_role_permissions_permission_id ON role_permissions (permission_id);
 
 -- ============================================================
--- 6. RefreshTokens
+-- 6. refresh_tokens  (uses bigint row_version, not xmin)
 -- ============================================================
 
-CREATE TABLE "RefreshTokens" (
-    "Id"              uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "UserId"          uuid                     NOT NULL,
-    "Token"           character varying(512)   NOT NULL,
-    "ExpiresAt"       timestamp with time zone NOT NULL,
-    "IsRevoked"       boolean                  NOT NULL,
-    "RevokedAt"       timestamp with time zone,
-    "RevokedReason"   character varying(500),
-    "ReplacedByToken" text,
-    "CreatedByIp"     character varying(50),
-    "RevokedByIp"     character varying(50),
-    "CreatedAt"       timestamp with time zone NOT NULL,
-    "CreatedBy"       uuid,
-    "UpdatedAt"       timestamp with time zone,
-    "UpdatedBy"       uuid,
-    "IsDeleted"       boolean                  NOT NULL,
-    "DeletedAt"       timestamp with time zone,
-    "DeletedBy"       uuid,
-    "RowVersion"      bigint                   NOT NULL,
-    CONSTRAINT "PK_RefreshTokens" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_RefreshTokens_Users_UserId"
-        FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+CREATE TABLE refresh_tokens (
+    id                uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    user_id           uuid                     NOT NULL,
+    token             character varying(512)   NOT NULL,
+    expires_at        timestamp with time zone NOT NULL,
+    is_revoked        boolean                  NOT NULL,
+    revoked_at        timestamp with time zone,
+    revoked_reason    character varying(500),
+    replaced_by_token text,
+    created_by_ip     character varying(50),
+    revoked_by_ip     character varying(50),
+    created_at        timestamp with time zone NOT NULL,
+    created_by        uuid,
+    updated_at        timestamp with time zone,
+    updated_by        uuid,
+    is_deleted        boolean                  NOT NULL,
+    deleted_at        timestamp with time zone,
+    deleted_by        uuid,
+    row_version       bigint                   NOT NULL DEFAULT 0,
+    CONSTRAINT pk_refresh_tokens PRIMARY KEY (id),
+    CONSTRAINT fk_refresh_tokens_users_user_id
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX "IX_RefreshTokens_Token"     ON "RefreshTokens" ("Token");
-CREATE INDEX        "IX_RefreshTokens_UserId"    ON "RefreshTokens" ("UserId");
-CREATE INDEX        "IX_RefreshTokens_ExpiresAt" ON "RefreshTokens" ("ExpiresAt");
+CREATE UNIQUE INDEX ix_refresh_tokens_token      ON refresh_tokens (token);
+CREATE INDEX        ix_refresh_tokens_user_id    ON refresh_tokens (user_id);
+CREATE INDEX        ix_refresh_tokens_expires_at ON refresh_tokens (expires_at);
 
 -- ============================================================
--- 7. Categories
+-- 7. categories
 -- ============================================================
 
-CREATE TABLE "Categories" (
-    "Id"          uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"        character varying(200)   NOT NULL,
-    "Slug"        character varying(250)   NOT NULL,
-    "Description" character varying(1000),
-    "IconUrl"     character varying(2048),
-    "SortOrder"   integer                  NOT NULL,
-    "IsActive"    boolean                  NOT NULL,
-    "CreatedAt"   timestamp with time zone NOT NULL,
-    "CreatedBy"   uuid,
-    "UpdatedAt"   timestamp with time zone,
-    "UpdatedBy"   uuid,
-    "IsDeleted"   boolean                  NOT NULL,
-    "DeletedAt"   timestamp with time zone,
-    "DeletedBy"   uuid,
-    CONSTRAINT "PK_Categories" PRIMARY KEY ("Id")
+CREATE TABLE categories (
+    id          uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name        character varying(200)   NOT NULL,
+    slug        character varying(250)   NOT NULL,
+    description character varying(1000),
+    icon_url    character varying(2048),
+    sort_order  integer                  NOT NULL,
+    is_active   boolean                  NOT NULL,
+    created_at  timestamp with time zone NOT NULL,
+    created_by  uuid,
+    updated_at  timestamp with time zone,
+    updated_by  uuid,
+    is_deleted  boolean                  NOT NULL,
+    deleted_at  timestamp with time zone,
+    deleted_by  uuid,
+    CONSTRAINT pk_categories PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX "IX_Categories_Slug" ON "Categories" ("Slug") WHERE "IsDeleted" = false;
+CREATE UNIQUE INDEX ix_categories_slug ON categories (slug) WHERE is_deleted = false;
 
 -- ============================================================
--- 8. Subcategories
+-- 8. subcategories
 -- ============================================================
 
-CREATE TABLE "Subcategories" (
-    "Id"          uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"        character varying(200)   NOT NULL,
-    "Slug"        character varying(250)   NOT NULL,
-    "Description" character varying(1000),
-    "SortOrder"   integer                  NOT NULL,
-    "IsActive"    boolean                  NOT NULL,
-    "CategoryId"  uuid                     NOT NULL,
-    "CreatedAt"   timestamp with time zone NOT NULL,
-    "CreatedBy"   uuid,
-    "UpdatedAt"   timestamp with time zone,
-    "UpdatedBy"   uuid,
-    "IsDeleted"   boolean                  NOT NULL,
-    "DeletedAt"   timestamp with time zone,
-    "DeletedBy"   uuid,
-    CONSTRAINT "PK_Subcategories" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_Subcategories_Categories_CategoryId"
-        FOREIGN KEY ("CategoryId") REFERENCES "Categories" ("Id") ON DELETE CASCADE
+CREATE TABLE subcategories (
+    id          uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name        character varying(200)   NOT NULL,
+    slug        character varying(250)   NOT NULL,
+    description character varying(1000),
+    sort_order  integer                  NOT NULL,
+    is_active   boolean                  NOT NULL,
+    category_id uuid                     NOT NULL,
+    created_at  timestamp with time zone NOT NULL,
+    created_by  uuid,
+    updated_at  timestamp with time zone,
+    updated_by  uuid,
+    is_deleted  boolean                  NOT NULL,
+    deleted_at  timestamp with time zone,
+    deleted_by  uuid,
+    CONSTRAINT pk_subcategories PRIMARY KEY (id),
+    CONSTRAINT fk_subcategories_categories_category_id
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX "IX_Subcategories_Slug"       ON "Subcategories" ("Slug") WHERE "IsDeleted" = false;
-CREATE INDEX        "IX_Subcategories_CategoryId" ON "Subcategories" ("CategoryId");
+CREATE UNIQUE INDEX ix_subcategories_slug        ON subcategories (slug) WHERE is_deleted = false;
+CREATE INDEX        ix_subcategories_category_id ON subcategories (category_id);
 
 -- ============================================================
--- 9. Tags
+-- 9. tags
 -- ============================================================
 
-CREATE TABLE "Tags" (
-    "Id"           uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"         character varying(150)   NOT NULL,
-    "Slug"         character varying(200)   NOT NULL,
-    "Description"  character varying(500),
-    "IsAiGenerated" boolean                 NOT NULL,
-    "CreatedAt"    timestamp with time zone NOT NULL,
-    "CreatedBy"    uuid,
-    "UpdatedAt"    timestamp with time zone,
-    "UpdatedBy"    uuid,
-    "IsDeleted"    boolean                  NOT NULL,
-    "DeletedAt"    timestamp with time zone,
-    "DeletedBy"    uuid,
-    CONSTRAINT "PK_Tags" PRIMARY KEY ("Id")
+CREATE TABLE tags (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name            character varying(150)   NOT NULL,
+    slug            character varying(200)   NOT NULL,
+    description     character varying(500),
+    is_ai_generated boolean                  NOT NULL,
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_tags PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX "IX_Tags_Slug" ON "Tags" ("Slug") WHERE "IsDeleted" = false;
+CREATE UNIQUE INDEX ix_tags_slug ON tags (slug) WHERE is_deleted = false;
 
 -- ============================================================
--- 10. WorkflowDefinitions
+-- 10. workflow_definitions
 -- ============================================================
 
-CREATE TABLE "WorkflowDefinitions" (
-    "Id"          uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Name"        character varying(200)   NOT NULL,
-    "Description" character varying(1000),
-    "IsDefault"   boolean                  NOT NULL,
-    "IsActive"    boolean                  NOT NULL,
-    "Version"     integer                  NOT NULL,
-    "CreatedAt"   timestamp with time zone NOT NULL,
-    "CreatedBy"   uuid,
-    "UpdatedAt"   timestamp with time zone,
-    "UpdatedBy"   uuid,
-    "IsDeleted"   boolean                  NOT NULL,
-    "DeletedAt"   timestamp with time zone,
-    "DeletedBy"   uuid,
-    CONSTRAINT "PK_WorkflowDefinitions" PRIMARY KEY ("Id")
+CREATE TABLE workflow_definitions (
+    id          uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    name        character varying(200)   NOT NULL,
+    description character varying(1000),
+    is_default  boolean                  NOT NULL,
+    is_active   boolean                  NOT NULL,
+    version     integer                  NOT NULL,
+    created_at  timestamp with time zone NOT NULL,
+    created_by  uuid,
+    updated_at  timestamp with time zone,
+    updated_by  uuid,
+    is_deleted  boolean                  NOT NULL,
+    deleted_at  timestamp with time zone,
+    deleted_by  uuid,
+    CONSTRAINT pk_workflow_definitions PRIMARY KEY (id)
 );
 
-CREATE INDEX "IX_WorkflowDefinitions_IsDefault" ON "WorkflowDefinitions" ("IsDefault");
+CREATE INDEX ix_workflow_definitions_is_default ON workflow_definitions (is_default);
 
 -- ============================================================
--- 11. WorkflowSteps
+-- 11. workflow_steps
+-- ("order" is quoted because ORDER is a SQL reserved word)
 -- ============================================================
 
-CREATE TABLE "WorkflowSteps" (
-    "Id"                   uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "WorkflowDefinitionId" uuid                     NOT NULL,
-    "Name"                 character varying(200)   NOT NULL,
-    "Description"          character varying(500),
-    "MapsToStatus"         integer                  NOT NULL,
-    "Order"                integer                  NOT NULL,
-    "IsInitial"            boolean                  NOT NULL,
-    "IsFinal"              boolean                  NOT NULL,
-    "RequiresReviewer"     boolean                  NOT NULL,
-    "RequiredPermission"   character varying(200),
-    "SlaHours"             integer,
-    "CreatedAt"            timestamp with time zone NOT NULL,
-    "CreatedBy"            uuid,
-    "UpdatedAt"            timestamp with time zone,
-    "UpdatedBy"            uuid,
-    "IsDeleted"            boolean                  NOT NULL,
-    "DeletedAt"            timestamp with time zone,
-    "DeletedBy"            uuid,
-    CONSTRAINT "PK_WorkflowSteps" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_WorkflowSteps_WorkflowDefinitions_WorkflowDefinitionId"
-        FOREIGN KEY ("WorkflowDefinitionId") REFERENCES "WorkflowDefinitions" ("Id") ON DELETE CASCADE
+CREATE TABLE workflow_steps (
+    id                     uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    workflow_definition_id uuid                     NOT NULL,
+    name                   character varying(200)   NOT NULL,
+    description            character varying(500),
+    maps_to_status         integer                  NOT NULL,
+    "order"                integer                  NOT NULL,
+    is_initial             boolean                  NOT NULL,
+    is_final               boolean                  NOT NULL,
+    requires_reviewer      boolean                  NOT NULL,
+    required_permission    character varying(200),
+    sla_hours              integer,
+    created_at             timestamp with time zone NOT NULL,
+    created_by             uuid,
+    updated_at             timestamp with time zone,
+    updated_by             uuid,
+    is_deleted             boolean                  NOT NULL,
+    deleted_at             timestamp with time zone,
+    deleted_by             uuid,
+    CONSTRAINT pk_workflow_steps PRIMARY KEY (id),
+    CONSTRAINT fk_workflow_steps_workflow_definitions_workflow_definition_id
+        FOREIGN KEY (workflow_definition_id) REFERENCES workflow_definitions (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_WorkflowSteps_WorkflowDefinitionId"
-    ON "WorkflowSteps" ("WorkflowDefinitionId");
-CREATE INDEX "IX_WorkflowSteps_WorkflowDefinitionId_Order"
-    ON "WorkflowSteps" ("WorkflowDefinitionId", "Order");
+CREATE INDEX ix_workflow_steps_workflow_definition_id
+    ON workflow_steps (workflow_definition_id);
+CREATE INDEX ix_workflow_steps_workflow_definition_id_order
+    ON workflow_steps (workflow_definition_id, "order");
 
 -- ============================================================
--- 12. WorkflowTransitions
+-- 12. workflow_transitions
 -- ============================================================
 
-CREATE TABLE "WorkflowTransitions" (
-    "Id"                   uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "WorkflowDefinitionId" uuid                     NOT NULL,
-    "FromStepId"           uuid                     NOT NULL,
-    "ToStepId"             uuid                     NOT NULL,
-    "ActionName"           character varying(200)   NOT NULL,
-    "Description"          character varying(500),
-    "RequiredPermission"   character varying(200),
-    "RequiresComment"      boolean                  NOT NULL,
-    "IsActive"             boolean                  NOT NULL,
-    "CreatedAt"            timestamp with time zone NOT NULL,
-    "CreatedBy"            uuid,
-    "UpdatedAt"            timestamp with time zone,
-    "UpdatedBy"            uuid,
-    "IsDeleted"            boolean                  NOT NULL,
-    "DeletedAt"            timestamp with time zone,
-    "DeletedBy"            uuid,
-    CONSTRAINT "PK_WorkflowTransitions" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_WorkflowTransitions_WorkflowDefinitions_WorkflowDefinitionId"
-        FOREIGN KEY ("WorkflowDefinitionId") REFERENCES "WorkflowDefinitions" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_WorkflowTransitions_WorkflowSteps_FromStepId"
-        FOREIGN KEY ("FromStepId") REFERENCES "WorkflowSteps" ("Id") ON DELETE RESTRICT,
-    CONSTRAINT "FK_WorkflowTransitions_WorkflowSteps_ToStepId"
-        FOREIGN KEY ("ToStepId") REFERENCES "WorkflowSteps" ("Id") ON DELETE RESTRICT
+CREATE TABLE workflow_transitions (
+    id                     uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    workflow_definition_id uuid                     NOT NULL,
+    from_step_id           uuid                     NOT NULL,
+    to_step_id             uuid                     NOT NULL,
+    action_name            character varying(200)   NOT NULL,
+    description            character varying(500),
+    required_permission    character varying(200),
+    requires_comment       boolean                  NOT NULL,
+    is_active              boolean                  NOT NULL,
+    created_at             timestamp with time zone NOT NULL,
+    created_by             uuid,
+    updated_at             timestamp with time zone,
+    updated_by             uuid,
+    is_deleted             boolean                  NOT NULL,
+    deleted_at             timestamp with time zone,
+    deleted_by             uuid,
+    CONSTRAINT pk_workflow_transitions PRIMARY KEY (id),
+    CONSTRAINT fk_workflow_transitions_workflow_definitions_workflow_definition_id
+        FOREIGN KEY (workflow_definition_id) REFERENCES workflow_definitions (id) ON DELETE CASCADE,
+    CONSTRAINT fk_workflow_transitions_workflow_steps_from_step_id
+        FOREIGN KEY (from_step_id) REFERENCES workflow_steps (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_workflow_transitions_workflow_steps_to_step_id
+        FOREIGN KEY (to_step_id) REFERENCES workflow_steps (id) ON DELETE RESTRICT
 );
 
-CREATE UNIQUE INDEX "IX_WorkflowTransitions_FromStepId_ToStepId"
-    ON "WorkflowTransitions" ("FromStepId", "ToStepId");
-CREATE INDEX "IX_WorkflowTransitions_ToStepId"
-    ON "WorkflowTransitions" ("ToStepId");
-CREATE INDEX "IX_WorkflowTransitions_WorkflowDefinitionId"
-    ON "WorkflowTransitions" ("WorkflowDefinitionId");
+CREATE UNIQUE INDEX ix_workflow_transitions_from_step_id_to_step_id
+    ON workflow_transitions (from_step_id, to_step_id);
+CREATE INDEX ix_workflow_transitions_to_step_id
+    ON workflow_transitions (to_step_id);
+CREATE INDEX ix_workflow_transitions_workflow_definition_id
+    ON workflow_transitions (workflow_definition_id);
 
 -- ============================================================
--- 13. Contents
+-- 13. contents
 -- ============================================================
 
-CREATE TABLE "Contents" (
-    "Id"                    uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "Title"                 character varying(500)   NOT NULL,
-    "Slug"                  character varying(600)   NOT NULL,
-    "Summary"               character varying(2000),
-    "Body"                  text,
-    "Language"              character varying(10)    NOT NULL DEFAULT 'en',
-    "Status"                integer                  NOT NULL DEFAULT 1,
-    "IsFeatured"            boolean                  NOT NULL,
-    "AllowComments"         boolean                  NOT NULL,
-    "ViewCount"             integer                  NOT NULL,
-    "SeoTitle"              character varying(300),
-    "SeoDescription"        character varying(500),
-    "SeoKeywords"           character varying(500),
-    "CanonicalUrl"          character varying(2048),
-    "PublishedAt"           timestamp with time zone,
-    "PublishedBy"           uuid,
-    "ScheduledPublishAt"    timestamp with time zone,
-    "ArchivedAt"            timestamp with time zone,
-    "CategoryId"            uuid,
-    "SubcategoryId"         uuid,
-    "CurrentWorkflowStepId" uuid,
-    "AssignedReviewerId"    uuid,
-    "CreatedAt"             timestamp with time zone NOT NULL,
-    "CreatedBy"             uuid,
-    "UpdatedAt"             timestamp with time zone,
-    "UpdatedBy"             uuid,
-    "IsDeleted"             boolean                  NOT NULL,
-    "DeletedAt"             timestamp with time zone,
-    "DeletedBy"             uuid,
-    CONSTRAINT "PK_Contents" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_Contents_Categories_CategoryId"
-        FOREIGN KEY ("CategoryId") REFERENCES "Categories" ("Id") ON DELETE SET NULL,
-    CONSTRAINT "FK_Contents_Subcategories_SubcategoryId"
-        FOREIGN KEY ("SubcategoryId") REFERENCES "Subcategories" ("Id") ON DELETE SET NULL,
-    CONSTRAINT "FK_Contents_WorkflowSteps_CurrentWorkflowStepId"
-        FOREIGN KEY ("CurrentWorkflowStepId") REFERENCES "WorkflowSteps" ("Id") ON DELETE SET NULL
+CREATE TABLE contents (
+    id                       uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    title                    character varying(500)   NOT NULL,
+    slug                     character varying(600)   NOT NULL,
+    summary                  character varying(2000),
+    body                     text,
+    language                 character varying(10)    NOT NULL DEFAULT 'en',
+    status                   integer                  NOT NULL DEFAULT 1,
+    is_featured              boolean                  NOT NULL,
+    allow_comments           boolean                  NOT NULL,
+    view_count               integer                  NOT NULL,
+    seo_title                character varying(300),
+    seo_description          character varying(500),
+    seo_keywords             character varying(500),
+    canonical_url            character varying(2048),
+    published_at             timestamp with time zone,
+    published_by             uuid,
+    scheduled_publish_at     timestamp with time zone,
+    archived_at              timestamp with time zone,
+    category_id              uuid,
+    subcategory_id           uuid,
+    current_workflow_step_id uuid,
+    assigned_reviewer_id     uuid,
+    created_at               timestamp with time zone NOT NULL,
+    created_by               uuid,
+    updated_at               timestamp with time zone,
+    updated_by               uuid,
+    is_deleted               boolean                  NOT NULL,
+    deleted_at               timestamp with time zone,
+    deleted_by               uuid,
+    CONSTRAINT pk_contents PRIMARY KEY (id),
+    CONSTRAINT fk_contents_categories_category_id
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL,
+    CONSTRAINT fk_contents_subcategories_subcategory_id
+        FOREIGN KEY (subcategory_id) REFERENCES subcategories (id) ON DELETE SET NULL,
+    CONSTRAINT fk_contents_workflow_steps_current_workflow_step_id
+        FOREIGN KEY (current_workflow_step_id) REFERENCES workflow_steps (id) ON DELETE SET NULL
 );
 
-CREATE UNIQUE INDEX "IX_Contents_Slug"       ON "Contents" ("Slug") WHERE "IsDeleted" = false;
-CREATE INDEX        "IX_Contents_Status"     ON "Contents" ("Status");
-CREATE INDEX        "IX_Contents_Language"   ON "Contents" ("Language");
-CREATE INDEX        "IX_Contents_IsFeatured" ON "Contents" ("IsFeatured");
-CREATE INDEX        "IX_Contents_PublishedAt" ON "Contents" ("PublishedAt");
-CREATE INDEX        "IX_Contents_CategoryId" ON "Contents" ("CategoryId");
-CREATE INDEX        "IX_Contents_CreatedAt"  ON "Contents" ("CreatedAt");
-CREATE INDEX        "IX_Contents_Status_Language_IsDeleted"
-    ON "Contents" ("Status", "Language", "IsDeleted");
-CREATE INDEX        "IX_Contents_SubcategoryId"         ON "Contents" ("SubcategoryId");
-CREATE INDEX        "IX_Contents_CurrentWorkflowStepId" ON "Contents" ("CurrentWorkflowStepId");
+CREATE UNIQUE INDEX ix_contents_slug
+    ON contents (slug) WHERE is_deleted = false;
+CREATE INDEX ix_contents_status               ON contents (status);
+CREATE INDEX ix_contents_language             ON contents (language);
+CREATE INDEX ix_contents_is_featured          ON contents (is_featured);
+CREATE INDEX ix_contents_published_at         ON contents (published_at);
+CREATE INDEX ix_contents_category_id          ON contents (category_id);
+CREATE INDEX ix_contents_created_at           ON contents (created_at);
+CREATE INDEX ix_contents_subcategory_id       ON contents (subcategory_id);
+CREATE INDEX ix_contents_current_workflow_step_id ON contents (current_workflow_step_id);
+CREATE INDEX ix_contents_status_language_is_deleted ON contents (status, language, is_deleted);
 
 -- ============================================================
--- 14. ContentTags
+-- 14. content_tags
 -- ============================================================
 
-CREATE TABLE "ContentTags" (
-    "ContentId"    uuid                     NOT NULL,
-    "TagId"        uuid                     NOT NULL,
-    "TaggedAt"     timestamp with time zone NOT NULL,
-    "IsAiGenerated" boolean                 NOT NULL,
-    CONSTRAINT "PK_ContentTags" PRIMARY KEY ("ContentId", "TagId"),
-    CONSTRAINT "FK_ContentTags_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_ContentTags_Tags_TagId"
-        FOREIGN KEY ("TagId") REFERENCES "Tags" ("Id") ON DELETE CASCADE
+CREATE TABLE content_tags (
+    content_id      uuid                     NOT NULL,
+    tag_id          uuid                     NOT NULL,
+    tagged_at       timestamp with time zone NOT NULL,
+    is_ai_generated boolean                  NOT NULL,
+    CONSTRAINT pk_content_tags PRIMARY KEY (content_id, tag_id),
+    CONSTRAINT fk_content_tags_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
+    CONSTRAINT fk_content_tags_tags_tag_id
+        FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_ContentTags_TagId" ON "ContentTags" ("TagId");
+CREATE INDEX ix_content_tags_tag_id ON content_tags (tag_id);
 
 -- ============================================================
--- 15. MediaAssets
+-- 15. media_assets
 -- ============================================================
 
-CREATE TABLE "MediaAssets" (
-    "Id"                    uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "OriginalFileName"      character varying(512)   NOT NULL,
-    "StorageKey"            character varying(1024)  NOT NULL,
-    "PublicUrl"             character varying(2048),
-    "CdnUrl"                character varying(2048),
-    "ContentType"           character varying(255)   NOT NULL,
-    "FileSizeBytes"         bigint                   NOT NULL,
-    "MediaType"             integer                  NOT NULL,
-    "Status"                integer                  NOT NULL DEFAULT 1,
-    "StorageProvider"       integer                  NOT NULL DEFAULT 1,
-    "Title"                 character varying(500),
-    "Description"           character varying(2000),
-    "AltText"               character varying(500),
-    "Language"              character varying(10)    NOT NULL DEFAULT 'en',
-    "DurationSeconds"       integer,
-    "Width"                 integer,
-    "Height"                integer,
-    "AspectRatio"           double precision,
-    "Codec"                 character varying(100),
-    "Bitrate"               integer,
-    "FrameRate"             double precision,
-    "ThumbnailUrl"          character varying(2048),
-    "PreviewUrl"            character varying(2048),
-    "HlsManifestUrl"        character varying(2048),
-    "IsTranscodingComplete" boolean                  NOT NULL,
-    "IsThumbnailGenerated"  boolean                  NOT NULL,
-    "IsMetadataExtracted"   boolean                  NOT NULL,
-    "AntivirusScanPassed"   boolean                  NOT NULL,
-    "AntivirusScannedAt"    timestamp with time zone,
-    "ExtractedMetadata"     jsonb,
-    "AiGeneratedTags"       jsonb,
-    "OcrText"               text,
-    "IsWatermarked"         boolean                  NOT NULL,
-    "SortOrder"             integer                  NOT NULL,
-    "IsPrimary"             boolean                  NOT NULL,
-    "ContentId"             uuid,
-    "CreatedAt"             timestamp with time zone NOT NULL,
-    "CreatedBy"             uuid,
-    "UpdatedAt"             timestamp with time zone,
-    "UpdatedBy"             uuid,
-    "IsDeleted"             boolean                  NOT NULL,
-    "DeletedAt"             timestamp with time zone,
-    "DeletedBy"             uuid,
-    CONSTRAINT "PK_MediaAssets" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_MediaAssets_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE SET NULL
+CREATE TABLE media_assets (
+    id                      uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    original_file_name      character varying(512)   NOT NULL,
+    storage_key             character varying(1024)  NOT NULL,
+    public_url              character varying(2048),
+    cdn_url                 character varying(2048),
+    content_type            character varying(255)   NOT NULL,
+    file_size_bytes         bigint                   NOT NULL,
+    media_type              integer                  NOT NULL,
+    status                  integer                  NOT NULL DEFAULT 1,
+    storage_provider        integer                  NOT NULL DEFAULT 1,
+    title                   character varying(500),
+    description             character varying(2000),
+    alt_text                character varying(500),
+    language                character varying(10)    NOT NULL DEFAULT 'en',
+    duration_seconds        integer,
+    width                   integer,
+    height                  integer,
+    aspect_ratio            double precision,
+    codec                   character varying(100),
+    bitrate                 integer,
+    frame_rate              double precision,
+    thumbnail_url           character varying(2048),
+    preview_url             character varying(2048),
+    hls_manifest_url        character varying(2048),
+    is_transcoding_complete boolean                  NOT NULL,
+    is_thumbnail_generated  boolean                  NOT NULL,
+    is_metadata_extracted   boolean                  NOT NULL,
+    antivirus_scan_passed   boolean                  NOT NULL,
+    antivirus_scanned_at    timestamp with time zone,
+    extracted_metadata      jsonb,
+    ai_generated_tags       jsonb,
+    ocr_text                text,
+    is_watermarked          boolean                  NOT NULL,
+    sort_order              integer                  NOT NULL,
+    is_primary              boolean                  NOT NULL,
+    content_id              uuid,
+    created_at              timestamp with time zone NOT NULL,
+    created_by              uuid,
+    updated_at              timestamp with time zone,
+    updated_by              uuid,
+    is_deleted              boolean                  NOT NULL,
+    deleted_at              timestamp with time zone,
+    deleted_by              uuid,
+    CONSTRAINT pk_media_assets PRIMARY KEY (id),
+    CONSTRAINT fk_media_assets_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE SET NULL
 );
 
-CREATE INDEX        "IX_MediaAssets_ContentId"          ON "MediaAssets" ("ContentId");
-CREATE INDEX        "IX_MediaAssets_MediaType"          ON "MediaAssets" ("MediaType");
-CREATE INDEX        "IX_MediaAssets_Status"             ON "MediaAssets" ("Status");
-CREATE UNIQUE INDEX "IX_MediaAssets_StorageKey"         ON "MediaAssets" ("StorageKey") WHERE "IsDeleted" = false;
-CREATE INDEX        "IX_MediaAssets_ContentId_IsPrimary" ON "MediaAssets" ("ContentId", "IsPrimary");
+CREATE INDEX        ix_media_assets_content_id            ON media_assets (content_id);
+CREATE INDEX        ix_media_assets_media_type            ON media_assets (media_type);
+CREATE INDEX        ix_media_assets_status                ON media_assets (status);
+CREATE UNIQUE INDEX ix_media_assets_storage_key           ON media_assets (storage_key) WHERE is_deleted = false;
+CREATE INDEX        ix_media_assets_content_id_is_primary ON media_assets (content_id, is_primary);
 
 -- ============================================================
--- 16. MediaVersions
+-- 16. media_versions
 -- ============================================================
 
-CREATE TABLE "MediaVersions" (
-    "Id"              uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "MediaAssetId"    uuid                     NOT NULL,
-    "StorageKey"      character varying(1024)  NOT NULL,
-    "PublicUrl"       character varying(2048),
-    "CdnUrl"          character varying(2048),
-    "ContentType"     character varying(255)   NOT NULL,
-    "FileSizeBytes"   bigint                   NOT NULL,
-    "Width"           integer,
-    "Height"          integer,
-    "Bitrate"         integer,
-    "DurationSeconds" integer,
-    "Quality"         integer,
-    "VersionLabel"    character varying(100)   NOT NULL,
-    "IsHls"           boolean                  NOT NULL,
-    "HlsManifestUrl"  character varying(2048),
-    "IsDefault"       boolean                  NOT NULL,
-    "StorageProvider" integer                  NOT NULL DEFAULT 1,
-    "CreatedAt"       timestamp with time zone NOT NULL,
-    "CreatedBy"       uuid,
-    "UpdatedAt"       timestamp with time zone,
-    "UpdatedBy"       uuid,
-    "IsDeleted"       boolean                  NOT NULL,
-    "DeletedAt"       timestamp with time zone,
-    "DeletedBy"       uuid,
-    CONSTRAINT "PK_MediaVersions" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_MediaVersions_MediaAssets_MediaAssetId"
-        FOREIGN KEY ("MediaAssetId") REFERENCES "MediaAssets" ("Id") ON DELETE CASCADE
+CREATE TABLE media_versions (
+    id               uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    media_asset_id   uuid                     NOT NULL,
+    storage_key      character varying(1024)  NOT NULL,
+    public_url       character varying(2048),
+    cdn_url          character varying(2048),
+    content_type     character varying(255)   NOT NULL,
+    file_size_bytes  bigint                   NOT NULL,
+    width            integer,
+    height           integer,
+    bitrate          integer,
+    duration_seconds integer,
+    quality          integer,
+    version_label    character varying(100)   NOT NULL,
+    is_hls           boolean                  NOT NULL,
+    hls_manifest_url character varying(2048),
+    is_default       boolean                  NOT NULL,
+    storage_provider integer                  NOT NULL DEFAULT 1,
+    created_at       timestamp with time zone NOT NULL,
+    created_by       uuid,
+    updated_at       timestamp with time zone,
+    updated_by       uuid,
+    is_deleted       boolean                  NOT NULL,
+    deleted_at       timestamp with time zone,
+    deleted_by       uuid,
+    CONSTRAINT pk_media_versions PRIMARY KEY (id),
+    CONSTRAINT fk_media_versions_media_assets_media_asset_id
+        FOREIGN KEY (media_asset_id) REFERENCES media_assets (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_MediaVersions_MediaAssetId" ON "MediaVersions" ("MediaAssetId");
-CREATE INDEX "IX_MediaVersions_Quality"      ON "MediaVersions" ("Quality");
-CREATE INDEX "IX_MediaVersions_IsDefault"    ON "MediaVersions" ("IsDefault");
+CREATE INDEX ix_media_versions_media_asset_id ON media_versions (media_asset_id);
+CREATE INDEX ix_media_versions_quality        ON media_versions (quality);
+CREATE INDEX ix_media_versions_is_default     ON media_versions (is_default);
 
 -- ============================================================
--- 17. Localizations
+-- 17. localizations
 -- ============================================================
 
-CREATE TABLE "Localizations" (
-    "Id"             uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "ContentId"      uuid                     NOT NULL,
-    "Language"       character varying(10)    NOT NULL,
-    "Title"          character varying(500)   NOT NULL,
-    "Summary"        character varying(2000),
-    "Body"           text,
-    "SeoTitle"       character varying(300),
-    "SeoDescription" character varying(500),
-    "IsApproved"     boolean                  NOT NULL,
-    "ApprovedAt"     timestamp with time zone,
-    "ApprovedBy"     uuid,
-    "CreatedAt"      timestamp with time zone NOT NULL,
-    "CreatedBy"      uuid,
-    "UpdatedAt"      timestamp with time zone,
-    "UpdatedBy"      uuid,
-    "IsDeleted"      boolean                  NOT NULL,
-    "DeletedAt"      timestamp with time zone,
-    "DeletedBy"      uuid,
-    CONSTRAINT "PK_Localizations" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_Localizations_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE
+CREATE TABLE localizations (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    content_id      uuid                     NOT NULL,
+    language        character varying(10)    NOT NULL,
+    title           character varying(500)   NOT NULL,
+    summary         character varying(2000),
+    body            text,
+    seo_title       character varying(300),
+    seo_description character varying(500),
+    is_approved     boolean                  NOT NULL,
+    approved_at     timestamp with time zone,
+    approved_by     uuid,
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_localizations PRIMARY KEY (id),
+    CONSTRAINT fk_localizations_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX "IX_Localizations_ContentId_Language"
-    ON "Localizations" ("ContentId", "Language")
-    WHERE "IsDeleted" = false;
+CREATE UNIQUE INDEX ix_localizations_content_id_language
+    ON localizations (content_id, language)
+    WHERE is_deleted = false;
 
 -- ============================================================
--- 18. Attachments
+-- 18. attachments
 -- ============================================================
 
-CREATE TABLE "Attachments" (
-    "Id"            uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "ContentId"     uuid                     NOT NULL,
-    "FileName"      character varying(512)   NOT NULL,
-    "StorageKey"    character varying(1024)  NOT NULL,
-    "PublicUrl"     character varying(2048),
-    "ContentType"   character varying(255)   NOT NULL,
-    "FileSizeBytes" bigint                   NOT NULL,
-    "Description"   character varying(1000),
-    "SortOrder"     integer                  NOT NULL,
-    "CreatedAt"     timestamp with time zone NOT NULL,
-    "CreatedBy"     uuid,
-    "UpdatedAt"     timestamp with time zone,
-    "UpdatedBy"     uuid,
-    "IsDeleted"     boolean                  NOT NULL,
-    "DeletedAt"     timestamp with time zone,
-    "DeletedBy"     uuid,
-    CONSTRAINT "PK_Attachments" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_Attachments_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE
+CREATE TABLE attachments (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    content_id      uuid                     NOT NULL,
+    file_name       character varying(512)   NOT NULL,
+    storage_key     character varying(1024)  NOT NULL,
+    public_url      character varying(2048),
+    content_type    character varying(255)   NOT NULL,
+    file_size_bytes bigint                   NOT NULL,
+    description     character varying(1000),
+    sort_order      integer                  NOT NULL,
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_attachments PRIMARY KEY (id),
+    CONSTRAINT fk_attachments_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_Attachments_ContentId" ON "Attachments" ("ContentId");
+CREATE INDEX ix_attachments_content_id ON attachments (content_id);
 
 -- ============================================================
--- 19. ScheduledPublications
+-- 19. scheduled_publications
 -- ============================================================
 
-CREATE TABLE "ScheduledPublications" (
-    "Id"            uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "ContentId"     uuid                     NOT NULL,
-    "ScheduledAt"   timestamp with time zone NOT NULL,
-    "IsExecuted"    boolean                  NOT NULL,
-    "ExecutedAt"    timestamp with time zone,
-    "IsSuccessful"  boolean                  NOT NULL,
-    "ErrorMessage"  character varying(2000),
-    "HangfireJobId" character varying(200),
-    "CreatedAt"     timestamp with time zone NOT NULL,
-    "CreatedBy"     uuid,
-    "UpdatedAt"     timestamp with time zone,
-    "UpdatedBy"     uuid,
-    "IsDeleted"     boolean                  NOT NULL,
-    "DeletedAt"     timestamp with time zone,
-    "DeletedBy"     uuid,
-    CONSTRAINT "PK_ScheduledPublications" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_ScheduledPublications_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE
+CREATE TABLE scheduled_publications (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    content_id      uuid                     NOT NULL,
+    scheduled_at    timestamp with time zone NOT NULL,
+    is_executed     boolean                  NOT NULL,
+    executed_at     timestamp with time zone,
+    is_successful   boolean                  NOT NULL,
+    error_message   character varying(2000),
+    hangfire_job_id character varying(200),
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    CONSTRAINT pk_scheduled_publications PRIMARY KEY (id),
+    CONSTRAINT fk_scheduled_publications_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_ScheduledPublications_ContentId" ON "ScheduledPublications" ("ContentId");
-CREATE INDEX "IX_ScheduledPublications_ScheduledAt_IsExecuted"
-    ON "ScheduledPublications" ("ScheduledAt", "IsExecuted");
+CREATE INDEX ix_scheduled_publications_content_id ON scheduled_publications (content_id);
+CREATE INDEX ix_scheduled_publications_scheduled_at_is_executed
+    ON scheduled_publications (scheduled_at, is_executed);
 
 -- ============================================================
--- 20. ReviewComments
+-- 20. review_comments
 -- ============================================================
 
-CREATE TABLE "ReviewComments" (
-    "Id"              uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "ContentId"       uuid                     NOT NULL,
-    "ReviewerId"      uuid                     NOT NULL,
-    "Comment"         character varying(5000)  NOT NULL,
-    "IsResolved"      boolean                  NOT NULL,
-    "ResolvedAt"      timestamp with time zone,
-    "ResolvedBy"      uuid,
-    "ParentCommentId" uuid,
-    "CreatedAt"       timestamp with time zone NOT NULL,
-    "CreatedBy"       uuid,
-    "UpdatedAt"       timestamp with time zone,
-    "UpdatedBy"       uuid,
-    "IsDeleted"       boolean                  NOT NULL,
-    "DeletedAt"       timestamp with time zone,
-    "DeletedBy"       uuid,
-    CONSTRAINT "PK_ReviewComments" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_ReviewComments_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_ReviewComments_Users_ReviewerId"
-        FOREIGN KEY ("ReviewerId") REFERENCES "Users" ("Id") ON DELETE RESTRICT,
-    CONSTRAINT "FK_ReviewComments_ReviewComments_ParentCommentId"
-        FOREIGN KEY ("ParentCommentId") REFERENCES "ReviewComments" ("Id") ON DELETE RESTRICT
+CREATE TABLE review_comments (
+    id                uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    content_id        uuid                     NOT NULL,
+    reviewer_id       uuid                     NOT NULL,
+    comment           character varying(5000)  NOT NULL,
+    is_resolved       boolean                  NOT NULL,
+    resolved_at       timestamp with time zone,
+    resolved_by       uuid,
+    parent_comment_id uuid,
+    created_at        timestamp with time zone NOT NULL,
+    created_by        uuid,
+    updated_at        timestamp with time zone,
+    updated_by        uuid,
+    is_deleted        boolean                  NOT NULL,
+    deleted_at        timestamp with time zone,
+    deleted_by        uuid,
+    CONSTRAINT pk_review_comments PRIMARY KEY (id),
+    CONSTRAINT fk_review_comments_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
+    CONSTRAINT fk_review_comments_users_reviewer_id
+        FOREIGN KEY (reviewer_id) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_review_comments_review_comments_parent_comment_id
+        FOREIGN KEY (parent_comment_id) REFERENCES review_comments (id) ON DELETE RESTRICT
 );
 
-CREATE INDEX "IX_ReviewComments_ContentId"       ON "ReviewComments" ("ContentId");
-CREATE INDEX "IX_ReviewComments_ReviewerId"      ON "ReviewComments" ("ReviewerId");
-CREATE INDEX "IX_ReviewComments_ParentCommentId" ON "ReviewComments" ("ParentCommentId");
+CREATE INDEX ix_review_comments_content_id        ON review_comments (content_id);
+CREATE INDEX ix_review_comments_reviewer_id       ON review_comments (reviewer_id);
+CREATE INDEX ix_review_comments_parent_comment_id ON review_comments (parent_comment_id);
 
 -- ============================================================
--- 21. ContentWorkflowHistories
+-- 21. content_workflow_histories  (uses bigint row_version, not xmin)
 -- ============================================================
 
-CREATE TABLE "ContentWorkflowHistories" (
-    "Id"               uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "ContentId"        uuid                     NOT NULL,
-    "FromStepId"       uuid,
-    "ToStepId"         uuid                     NOT NULL,
-    "TransitionedById" uuid                     NOT NULL,
-    "FromStatus"       integer                  NOT NULL,
-    "ToStatus"         integer                  NOT NULL,
-    "Comment"          character varying(2000),
-    "ActionName"       character varying(200),
-    "TransitionedAt"   timestamp with time zone NOT NULL,
-    "CreatedAt"        timestamp with time zone NOT NULL,
-    "CreatedBy"        uuid,
-    "UpdatedAt"        timestamp with time zone,
-    "UpdatedBy"        uuid,
-    "IsDeleted"        boolean                  NOT NULL,
-    "DeletedAt"        timestamp with time zone,
-    "DeletedBy"        uuid,
-    "RowVersion"       bigint                   NOT NULL,
-    CONSTRAINT "PK_ContentWorkflowHistories" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_ContentWorkflowHistories_Contents_ContentId"
-        FOREIGN KEY ("ContentId") REFERENCES "Contents" ("Id") ON DELETE CASCADE,
-    CONSTRAINT "FK_ContentWorkflowHistories_Users_TransitionedById"
-        FOREIGN KEY ("TransitionedById") REFERENCES "Users" ("Id") ON DELETE RESTRICT,
-    CONSTRAINT "FK_ContentWorkflowHistories_WorkflowSteps_FromStepId"
-        FOREIGN KEY ("FromStepId") REFERENCES "WorkflowSteps" ("Id") ON DELETE SET NULL,
-    CONSTRAINT "FK_ContentWorkflowHistories_WorkflowSteps_ToStepId"
-        FOREIGN KEY ("ToStepId") REFERENCES "WorkflowSteps" ("Id") ON DELETE RESTRICT
+CREATE TABLE content_workflow_histories (
+    id                  uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    content_id          uuid                     NOT NULL,
+    from_step_id        uuid,
+    to_step_id          uuid                     NOT NULL,
+    transitioned_by_id  uuid                     NOT NULL,
+    from_status         integer                  NOT NULL,
+    to_status           integer                  NOT NULL,
+    comment             character varying(2000),
+    action_name         character varying(200),
+    transitioned_at     timestamp with time zone NOT NULL,
+    created_at          timestamp with time zone NOT NULL,
+    created_by          uuid,
+    updated_at          timestamp with time zone,
+    updated_by          uuid,
+    is_deleted          boolean                  NOT NULL,
+    deleted_at          timestamp with time zone,
+    deleted_by          uuid,
+    row_version         bigint                   NOT NULL DEFAULT 0,
+    CONSTRAINT pk_content_workflow_histories PRIMARY KEY (id),
+    CONSTRAINT fk_content_workflow_histories_contents_content_id
+        FOREIGN KEY (content_id) REFERENCES contents (id) ON DELETE CASCADE,
+    CONSTRAINT fk_content_workflow_histories_users_transitioned_by_id
+        FOREIGN KEY (transitioned_by_id) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_content_workflow_histories_workflow_steps_from_step_id
+        FOREIGN KEY (from_step_id) REFERENCES workflow_steps (id) ON DELETE SET NULL,
+    CONSTRAINT fk_content_workflow_histories_workflow_steps_to_step_id
+        FOREIGN KEY (to_step_id) REFERENCES workflow_steps (id) ON DELETE RESTRICT
 );
 
-CREATE INDEX "IX_ContentWorkflowHistories_ContentId"
-    ON "ContentWorkflowHistories" ("ContentId");
-CREATE INDEX "IX_ContentWorkflowHistories_TransitionedAt"
-    ON "ContentWorkflowHistories" ("TransitionedAt");
-CREATE INDEX "IX_ContentWorkflowHistories_FromStepId"
-    ON "ContentWorkflowHistories" ("FromStepId");
-CREATE INDEX "IX_ContentWorkflowHistories_ToStepId"
-    ON "ContentWorkflowHistories" ("ToStepId");
-CREATE INDEX "IX_ContentWorkflowHistories_TransitionedById"
-    ON "ContentWorkflowHistories" ("TransitionedById");
+CREATE INDEX ix_content_workflow_histories_content_id
+    ON content_workflow_histories (content_id);
+CREATE INDEX ix_content_workflow_histories_transitioned_at
+    ON content_workflow_histories (transitioned_at);
+CREATE INDEX ix_content_workflow_histories_from_step_id
+    ON content_workflow_histories (from_step_id);
+CREATE INDEX ix_content_workflow_histories_to_step_id
+    ON content_workflow_histories (to_step_id);
+CREATE INDEX ix_content_workflow_histories_transitioned_by_id
+    ON content_workflow_histories (transitioned_by_id);
 
 -- ============================================================
--- 22. Notifications
+-- 22. notifications
 -- ============================================================
 
-CREATE TABLE "Notifications" (
-    "Id"            uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "UserId"        uuid                     NOT NULL,
-    "Type"          integer                  NOT NULL,
-    "Title"         character varying(300)   NOT NULL,
-    "Message"       character varying(2000)  NOT NULL,
-    "IsRead"        boolean                  NOT NULL,
-    "ReadAt"        timestamp with time zone,
-    "ReferenceId"   uuid,
-    "ReferenceType" character varying(100),
-    "ActionUrl"     character varying(2048),
-    "Metadata"      jsonb,
-    "CreatedAt"     timestamp with time zone NOT NULL,
-    "CreatedBy"     uuid,
-    "UpdatedAt"     timestamp with time zone,
-    "UpdatedBy"     uuid,
-    "IsDeleted"     boolean                  NOT NULL,
-    "DeletedAt"     timestamp with time zone,
-    "DeletedBy"     uuid,
-    CONSTRAINT "PK_Notifications" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_Notifications_Users_UserId"
-        FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+CREATE TABLE notifications (
+    id             uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    user_id        uuid                     NOT NULL,
+    type           integer                  NOT NULL,
+    title          character varying(300)   NOT NULL,
+    message        character varying(2000)  NOT NULL,
+    is_read        boolean                  NOT NULL,
+    read_at        timestamp with time zone,
+    reference_id   uuid,
+    reference_type character varying(100),
+    action_url     character varying(2048),
+    metadata       jsonb,
+    created_at     timestamp with time zone NOT NULL,
+    created_by     uuid,
+    updated_at     timestamp with time zone,
+    updated_by     uuid,
+    is_deleted     boolean                  NOT NULL,
+    deleted_at     timestamp with time zone,
+    deleted_by     uuid,
+    CONSTRAINT pk_notifications PRIMARY KEY (id),
+    CONSTRAINT fk_notifications_users_user_id
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE INDEX "IX_Notifications_UserId"        ON "Notifications" ("UserId");
-CREATE INDEX "IX_Notifications_UserId_IsRead" ON "Notifications" ("UserId", "IsRead");
-CREATE INDEX "IX_Notifications_CreatedAt"     ON "Notifications" ("CreatedAt");
+CREATE INDEX ix_notifications_user_id         ON notifications (user_id);
+CREATE INDEX ix_notifications_user_id_is_read ON notifications (user_id, is_read);
+CREATE INDEX ix_notifications_created_at      ON notifications (created_at);
 
 -- ============================================================
--- 23. AuditLogs
+-- 23. audit_logs  (uses bigint row_version, not xmin)
 -- ============================================================
 
-CREATE TABLE "AuditLogs" (
-    "Id"             uuid                     NOT NULL DEFAULT gen_random_uuid(),
-    "UserId"         uuid,
-    "UserEmail"      character varying(256),
-    "Action"         integer                  NOT NULL,
-    "EntityType"     character varying(200)   NOT NULL,
-    "EntityId"       character varying(100),
-    "OldValues"      jsonb,
-    "NewValues"      jsonb,
-    "IpAddress"      character varying(50),
-    "UserAgent"      character varying(512),
-    "AdditionalData" jsonb,
-    "IsSuccessful"   boolean                  NOT NULL,
-    "ErrorMessage"   character varying(2000),
-    "CreatedAt"      timestamp with time zone NOT NULL,
-    "CreatedBy"      uuid,
-    "UpdatedAt"      timestamp with time zone,
-    "UpdatedBy"      uuid,
-    "IsDeleted"      boolean                  NOT NULL,
-    "DeletedAt"      timestamp with time zone,
-    "DeletedBy"      uuid,
-    "RowVersion"     bigint                   NOT NULL,
-    CONSTRAINT "PK_AuditLogs" PRIMARY KEY ("Id")
+CREATE TABLE audit_logs (
+    id              uuid                     NOT NULL DEFAULT gen_random_uuid(),
+    user_id         uuid,
+    user_email      character varying(256),
+    action          integer                  NOT NULL,
+    entity_type     character varying(200)   NOT NULL,
+    entity_id       character varying(100),
+    old_values      jsonb,
+    new_values      jsonb,
+    ip_address      character varying(50),
+    user_agent      character varying(512),
+    additional_data jsonb,
+    is_successful   boolean                  NOT NULL,
+    error_message   character varying(2000),
+    created_at      timestamp with time zone NOT NULL,
+    created_by      uuid,
+    updated_at      timestamp with time zone,
+    updated_by      uuid,
+    is_deleted      boolean                  NOT NULL,
+    deleted_at      timestamp with time zone,
+    deleted_by      uuid,
+    row_version     bigint                   NOT NULL DEFAULT 0,
+    CONSTRAINT pk_audit_logs PRIMARY KEY (id)
 );
 
-CREATE INDEX "IX_AuditLogs_UserId"              ON "AuditLogs" ("UserId");
-CREATE INDEX "IX_AuditLogs_Action"              ON "AuditLogs" ("Action");
-CREATE INDEX "IX_AuditLogs_EntityType"          ON "AuditLogs" ("EntityType");
-CREATE INDEX "IX_AuditLogs_CreatedAt"           ON "AuditLogs" ("CreatedAt");
-CREATE INDEX "IX_AuditLogs_EntityType_EntityId" ON "AuditLogs" ("EntityType", "EntityId");
+CREATE INDEX ix_audit_logs_user_id               ON audit_logs (user_id);
+CREATE INDEX ix_audit_logs_action                ON audit_logs (action);
+CREATE INDEX ix_audit_logs_entity_type           ON audit_logs (entity_type);
+CREATE INDEX ix_audit_logs_created_at            ON audit_logs (created_at);
+CREATE INDEX ix_audit_logs_entity_type_entity_id ON audit_logs (entity_type, entity_id);
 
 -- ============================================================
--- 24. Seed data — 7 Roles
---     (timestamps taken from InitialDatabase UpdateData calls)
+-- Seed data — 7 Roles
+-- (timestamps from model snapshot)
 -- ============================================================
 
-INSERT INTO "Roles" ("Id", "Name", "NormalizedName", "Description", "IsSystem", "CreatedAt", "IsDeleted")
+INSERT INTO roles (id, name, normalized_name, description, is_system, created_at, is_deleted)
 VALUES
-  ('10000000-0000-0000-0000-000000000001', 'Administrator',    'ADMINISTRATOR',    'Full system access',                    true,  '2026-05-20 13:33:35.539030+00', false),
-  ('10000000-0000-0000-0000-000000000002', 'ContentCreator',   'CONTENTCREATOR',   'Create and edit content',               true,  '2026-05-20 13:33:35.539106+00', false),
-  ('10000000-0000-0000-0000-000000000003', 'Reviewer',         'REVIEWER',         'Review and approve content',            true,  '2026-05-20 13:33:35.539107+00', false),
-  ('10000000-0000-0000-0000-000000000004', 'LanguageReviewer', 'LANGUAGEREVIEWER', 'Review language and translations',      true,  '2026-05-20 13:33:35.539107+00', false),
-  ('10000000-0000-0000-0000-000000000005', 'Designer',         'DESIGNER',         'Manage media assets',                   true,  '2026-05-20 13:33:35.539107+00', false),
-  ('10000000-0000-0000-0000-000000000006', 'Publisher',        'PUBLISHER',        'Publish and schedule content',          true,  '2026-05-20 13:33:35.539107+00', false),
-  ('10000000-0000-0000-0000-000000000007', 'Archivist',        'ARCHIVIST',        'Archive and restore content',           true,  '2026-05-20 13:33:35.539108+00', false);
+  ('10000000-0000-0000-0000-000000000001', 'Administrator',    'ADMINISTRATOR',    'Full system access',               true, '2026-05-20 13:33:35.539031+00', false),
+  ('10000000-0000-0000-0000-000000000002', 'ContentCreator',   'CONTENTCREATOR',   'Create and edit content',          true, '2026-05-20 13:33:35.539107+00', false),
+  ('10000000-0000-0000-0000-000000000003', 'Reviewer',         'REVIEWER',         'Review and approve content',       true, '2026-05-20 13:33:35.539107+00', false),
+  ('10000000-0000-0000-0000-000000000004', 'LanguageReviewer', 'LANGUAGEREVIEWER', 'Review language and translations', true, '2026-05-20 13:33:35.539107+00', false),
+  ('10000000-0000-0000-0000-000000000005', 'Designer',         'DESIGNER',         'Manage media assets',              true, '2026-05-20 13:33:35.539108+00', false),
+  ('10000000-0000-0000-0000-000000000006', 'Publisher',        'PUBLISHER',        'Publish and schedule content',     true, '2026-05-20 13:33:35.539108+00', false),
+  ('10000000-0000-0000-0000-000000000007', 'Archivist',        'ARCHIVIST',        'Archive and restore content',      true, '2026-05-20 13:33:35.539108+00', false);
 
 -- ============================================================
--- 25. Seed data — 17 Permissions
---     (timestamps taken from InitialDatabase InsertData calls)
+-- Seed data — 17 Permissions
+-- (timestamps from model snapshot)
 -- ============================================================
 
-INSERT INTO "Permissions" ("Id", "Name", "NormalizedName", "Description", "Module", "CreatedAt", "IsDeleted")
+INSERT INTO permissions (id, name, normalized_name, description, module, created_at, is_deleted)
 VALUES
-  ('20000000-0000-0000-0000-000000000001', 'CreateContent',      'CREATECONTENT',      'CreateContent permission',      'Content',  '2026-05-20 13:33:35.533352+00', false),
+  ('20000000-0000-0000-0000-000000000001', 'CreateContent',      'CREATECONTENT',      'CreateContent permission',      'Content',  '2026-05-20 13:33:35.533353+00', false),
   ('20000000-0000-0000-0000-000000000002', 'EditContent',        'EDITCONTENT',        'EditContent permission',        'Content',  '2026-05-20 13:33:35.534274+00', false),
   ('20000000-0000-0000-0000-000000000003', 'DeleteContent',      'DELETECONTENT',      'DeleteContent permission',      'Content',  '2026-05-20 13:33:35.534283+00', false),
   ('20000000-0000-0000-0000-000000000004', 'PublishContent',     'PUBLISHCONTENT',     'PublishContent permission',     'Content',  '2026-05-20 13:33:35.534283+00', false),
@@ -848,11 +849,11 @@ VALUES
   ('20000000-0000-0000-0000-000000000017', 'ManageTags',         'MANAGETAGS',         'ManageTags permission',         'Taxonomy', '2026-05-20 13:33:35.534323+00', false);
 
 -- ============================================================
--- 26. Mark both EF migrations as applied
+-- Mark both EF migrations as applied
 -- ============================================================
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion") VALUES
-  ('20260518000000_InitialCreate',  '9.0.4'),
-  ('20260520133335_InitialDatabase', '9.0.4');
+  ('20260518000000_InitialCreate',   '9.0.4'),
+  ('20260520133336_InitialDatabase', '9.0.4');
 
 COMMIT;
