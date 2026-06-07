@@ -3,10 +3,11 @@
     "BMedia.API": {
       "commandName": "Project",
       "launchBrowser": true,
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:63256;http://localhost:63257"
+      "applicationUrl": "http://localhost:5000;https://localhost:5001"
     },
     "IIS Express": {
       "commandName": "IISExpress",

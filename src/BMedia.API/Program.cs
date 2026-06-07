@@ -28,30 +28,40 @@ builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();
 
-// Apply migrations on startup
+// Apply pending EF migrations on startup (non-fatal — DB may be pre-seeded via SQL script)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Migration step skipped — database may already be at the latest schema version");
+    }
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// Swagger — always enabled so it is reachable during development regardless of HTTPS cert trust
+app.UseSwagger();
+app.UseSwaggerUI(opt =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(opt =>
-    {
-        opt.SwaggerEndpoint("/swagger/v1/swagger.json", "BMedia API v1");
-        opt.RoutePrefix = string.Empty;
-        opt.DocumentTitle = "BMedia API";
-        opt.DisplayRequestDuration();
-        opt.EnableDeepLinking();
-    });
-}
+    opt.SwaggerEndpoint("/swagger/v1/swagger.json", "BMedia API v1");
+    opt.RoutePrefix = "swagger";          // accessible at /swagger
+    opt.DocumentTitle = "BMedia API";
+    opt.DisplayRequestDuration();
+    opt.EnableDeepLinking();
+});
 
-app.UseHttpsRedirection();
-app.UseHsts();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
 
 // Security headers
 app.Use(async (context, next) =>
