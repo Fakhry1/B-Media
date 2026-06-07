@@ -8,11 +8,13 @@ public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+    private readonly IHostEnvironment _env;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IHostEnvironment env)
     {
         _next = next;
         _logger = logger;
+        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -46,12 +48,12 @@ public class ExceptionHandlingMiddleware
             _logger.LogError(ex, "Unhandled exception");
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
-            {
-                title = "An error occurred",
-                status = 500,
-                detail = "An unexpected error occurred. Please try again later."
-            }));
+
+            object body = _env.IsDevelopment()
+                ? new { title = "An error occurred", status = 500, detail = ex.Message, exceptionType = ex.GetType().Name, stackTrace = ex.StackTrace }
+                : new { title = "An error occurred", status = 500, detail = "An unexpected error occurred. Please try again later." };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(body));
         }
     }
 }
