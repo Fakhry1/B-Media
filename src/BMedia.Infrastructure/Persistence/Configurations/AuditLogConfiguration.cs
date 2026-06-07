@@ -8,7 +8,6 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 {
     public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
-        builder.ToTable("AuditLogs");
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(a => a.UserEmail).HasMaxLength(256);
@@ -28,7 +27,6 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.HasIndex(a => a.CreatedAt);
         builder.HasIndex(a => new { a.EntityType, a.EntityId });
 
-        // AuditLog never soft-deleted
         builder.HasQueryFilter(a => true);
     }
 }

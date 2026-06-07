@@ -9,7 +9,6 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
 {
     public void Configure(EntityTypeBuilder<MediaAsset> builder)
     {
-        builder.ToTable("MediaAssets");
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id).HasDefaultValueSql("gen_random_uuid()");
 
@@ -39,7 +38,7 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
         builder.HasIndex(m => m.ContentId);
         builder.HasIndex(m => m.MediaType);
         builder.HasIndex(m => m.Status);
-        builder.HasIndex(m => m.StorageKey).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(m => m.StorageKey).IsUnique().HasFilter("is_deleted = false");
         builder.HasIndex(m => new { m.ContentId, m.IsPrimary });
     }
 }

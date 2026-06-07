@@ -9,7 +9,6 @@ public class MediaVersionConfiguration : IEntityTypeConfiguration<MediaVersion>
 {
     public void Configure(EntityTypeBuilder<MediaVersion> builder)
     {
-        builder.ToTable("MediaVersions");
         builder.HasKey(v => v.Id);
         builder.Property(v => v.Id).HasDefaultValueSql("gen_random_uuid()");
 

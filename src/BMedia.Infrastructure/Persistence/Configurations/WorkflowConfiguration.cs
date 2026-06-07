@@ -9,7 +9,6 @@ public class WorkflowDefinitionConfiguration : IEntityTypeConfiguration<Workflow
 {
     public void Configure(EntityTypeBuilder<WorkflowDefinition> builder)
     {
-        builder.ToTable("WorkflowDefinitions");
         builder.HasKey(w => w.Id);
         builder.Property(w => w.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(w => w.Name).IsRequired().HasMaxLength(200);
@@ -23,7 +22,6 @@ public class WorkflowStepConfiguration : IEntityTypeConfiguration<WorkflowStep>
 {
     public void Configure(EntityTypeBuilder<WorkflowStep> builder)
     {
-        builder.ToTable("WorkflowSteps");
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
@@ -43,7 +41,6 @@ public class WorkflowTransitionConfiguration : IEntityTypeConfiguration<Workflow
 {
     public void Configure(EntityTypeBuilder<WorkflowTransition> builder)
     {
-        builder.ToTable("WorkflowTransitions");
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(t => t.ActionName).IsRequired().HasMaxLength(200);

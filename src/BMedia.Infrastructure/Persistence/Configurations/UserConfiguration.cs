@@ -8,7 +8,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("Users");
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Id).HasDefaultValueSql("gen_random_uuid()");
@@ -24,8 +23,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.RowVersion).IsRowVersion();
 
-        builder.HasIndex(u => u.Email).IsUnique().HasFilter("\"IsDeleted\" = false");
-        builder.HasIndex(u => u.Username).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(u => u.Email).IsUnique().HasFilter("is_deleted = false");
+        builder.HasIndex(u => u.Username).IsUnique().HasFilter("is_deleted = false");
         builder.HasIndex(u => u.IsDeleted);
         builder.HasIndex(u => u.IsActive);
     }

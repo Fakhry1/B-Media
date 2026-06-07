@@ -9,7 +9,6 @@ public class ContentConfiguration : IEntityTypeConfiguration<Content>
 {
     public void Configure(EntityTypeBuilder<Content> builder)
     {
-        builder.ToTable("Contents");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).HasDefaultValueSql("gen_random_uuid()");
 
@@ -29,7 +28,7 @@ public class ContentConfiguration : IEntityTypeConfiguration<Content>
         builder.HasOne(c => c.Subcategory).WithMany(s => s.Contents).HasForeignKey(c => c.SubcategoryId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(c => c.CurrentWorkflowStep).WithMany(ws => ws.Contents).HasForeignKey(c => c.CurrentWorkflowStepId).OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(c => c.Slug).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(c => c.Slug).IsUnique().HasFilter("is_deleted = false");
         builder.HasIndex(c => c.Status);
         builder.HasIndex(c => c.Language);
         builder.HasIndex(c => c.IsFeatured);

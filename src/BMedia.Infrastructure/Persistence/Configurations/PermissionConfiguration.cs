@@ -8,7 +8,6 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
 {
     public void Configure(EntityTypeBuilder<Permission> builder)
     {
-        builder.ToTable("Permissions");
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
@@ -17,7 +16,7 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
         builder.Property(p => p.Module).IsRequired().HasMaxLength(100);
         builder.Property(p => p.RowVersion).IsRowVersion();
 
-        builder.HasIndex(p => p.NormalizedName).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(p => p.NormalizedName).IsUnique().HasFilter("is_deleted = false");
         builder.HasIndex(p => p.Module);
 
         var permissions = new[]

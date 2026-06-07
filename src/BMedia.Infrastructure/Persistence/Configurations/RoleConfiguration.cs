@@ -8,7 +8,6 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
     public void Configure(EntityTypeBuilder<Role> builder)
     {
-        builder.ToTable("Roles");
         builder.HasKey(r => r.Id);
         builder.Property(r => r.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(r => r.Name).IsRequired().HasMaxLength(100);
@@ -16,7 +15,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.Property(r => r.Description).HasMaxLength(500);
         builder.Property(r => r.RowVersion).IsRowVersion();
 
-        builder.HasIndex(r => r.NormalizedName).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(r => r.NormalizedName).IsUnique().HasFilter("is_deleted = false");
 
         builder.HasData(
             new Role { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), Name = "Administrator", NormalizedName = "ADMINISTRATOR", IsSystem = true },
