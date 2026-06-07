@@ -1,13 +1,75 @@
 -- ============================================================
 -- BMedia — Complete Database Setup (Clean Slate)
 -- Combines both EF migrations into one idempotent script.
--- Run this on a FRESH (empty) PostgreSQL 16+ database.
+-- Safe to run on any database — drops existing BMedia tables
+-- first, then recreates everything in the correct final state.
 --
 -- After applying, EF Core will see both migrations as already
 -- applied and will not try to run them again.
 -- ============================================================
 
 BEGIN;
+
+-- ============================================================
+-- 0a. Drop all existing BMedia tables (safe on first run too)
+--     CASCADE handles FK dependencies automatically.
+-- ============================================================
+
+DROP TABLE IF EXISTS "AuditLogs"                CASCADE;
+DROP TABLE IF EXISTS "Notifications"            CASCADE;
+DROP TABLE IF EXISTS "ContentWorkflowHistories" CASCADE;
+DROP TABLE IF EXISTS "ReviewComments"           CASCADE;
+DROP TABLE IF EXISTS "ScheduledPublications"    CASCADE;
+DROP TABLE IF EXISTS "Attachments"              CASCADE;
+DROP TABLE IF EXISTS "Localizations"            CASCADE;
+DROP TABLE IF EXISTS "MediaVersions"            CASCADE;
+DROP TABLE IF EXISTS "ContentTags"              CASCADE;
+DROP TABLE IF EXISTS "MediaAssets"              CASCADE;
+DROP TABLE IF EXISTS "Contents"                 CASCADE;
+DROP TABLE IF EXISTS "WorkflowTransitions"      CASCADE;
+DROP TABLE IF EXISTS "WorkflowSteps"            CASCADE;
+DROP TABLE IF EXISTS "WorkflowDefinitions"      CASCADE;
+DROP TABLE IF EXISTS "Tags"                     CASCADE;
+DROP TABLE IF EXISTS "Subcategories"            CASCADE;
+DROP TABLE IF EXISTS "Categories"               CASCADE;
+DROP TABLE IF EXISTS "RefreshTokens"            CASCADE;
+DROP TABLE IF EXISTS "UserRoles"                CASCADE;
+DROP TABLE IF EXISTS "RolePermissions"          CASCADE;
+DROP TABLE IF EXISTS "Users"                    CASCADE;
+DROP TABLE IF EXISTS "Roles"                    CASCADE;
+DROP TABLE IF EXISTS "Permissions"              CASCADE;
+
+-- Also clean up snake_case tables from any prior InitialCreate run
+DROP TABLE IF EXISTS audit_logs                  CASCADE;
+DROP TABLE IF EXISTS content_workflow_histories  CASCADE;
+DROP TABLE IF EXISTS content_tags                CASCADE;
+DROP TABLE IF EXISTS review_comments             CASCADE;
+DROP TABLE IF EXISTS notifications               CASCADE;
+DROP TABLE IF EXISTS scheduled_publications      CASCADE;
+DROP TABLE IF EXISTS attachments                 CASCADE;
+DROP TABLE IF EXISTS localizations               CASCADE;
+DROP TABLE IF EXISTS media_versions              CASCADE;
+DROP TABLE IF EXISTS media_assets                CASCADE;
+DROP TABLE IF EXISTS contents                    CASCADE;
+DROP TABLE IF EXISTS workflow_transitions        CASCADE;
+DROP TABLE IF EXISTS workflow_steps              CASCADE;
+DROP TABLE IF EXISTS workflow_definitions        CASCADE;
+DROP TABLE IF EXISTS tags                        CASCADE;
+DROP TABLE IF EXISTS subcategories               CASCADE;
+DROP TABLE IF EXISTS categories                  CASCADE;
+DROP TABLE IF EXISTS refresh_tokens              CASCADE;
+DROP TABLE IF EXISTS user_roles                  CASCADE;
+DROP TABLE IF EXISTS role_permissions            CASCADE;
+DROP TABLE IF EXISTS users                       CASCADE;
+DROP TABLE IF EXISTS roles                       CASCADE;
+DROP TABLE IF EXISTS permissions                 CASCADE;
+
+-- Remove any previously recorded migrations
+DELETE FROM "__EFMigrationsHistory"
+WHERE "MigrationId" IN (
+    '20260518000000_InitialCreate',
+    '20260520133335_InitialDatabase'
+);
 
 -- ============================================================
 -- 0. EF Migrations history table
