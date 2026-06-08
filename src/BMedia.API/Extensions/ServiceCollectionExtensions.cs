@@ -1,9 +1,11 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using BMedia.API.Authorization;
 using BMedia.Domain.Interfaces;
 using BMedia.Infrastructure.Services.Auth;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -56,6 +58,8 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddAuthorization();
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     }
 
     private static void AddSwagger(IServiceCollection services)
