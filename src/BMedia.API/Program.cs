@@ -28,6 +28,16 @@ builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();
 
+// Log JWT configuration at startup to verify settings are loaded correctly
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var jwtSection = builder.Configuration.GetSection("Jwt");
+startupLogger.LogInformation(
+    "JWT config — Issuer={Issuer} Audience={Audience} KeyConfigured={HasKey} KeyLength={KeyLength}",
+    jwtSection["Issuer"],
+    jwtSection["Audience"],
+    !string.IsNullOrEmpty(jwtSection["SecretKey"]),
+    jwtSection["SecretKey"]?.Length ?? 0);
+
 // Apply pending EF migrations on startup (non-fatal — DB may be pre-seeded via SQL script)
 using (var scope = app.Services.CreateScope())
 {

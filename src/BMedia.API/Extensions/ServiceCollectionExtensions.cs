@@ -37,6 +37,11 @@ public static class ServiceCollectionExtensions
     {
         var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()!;
 
+        if (string.IsNullOrWhiteSpace(jwtSettings?.SecretKey))
+            throw new InvalidOperationException("Jwt:SecretKey is not configured in appsettings.json.");
+
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+
         services.AddAuthentication(opt =>
         {
             opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -51,9 +56,24 @@ public static class ServiceCollectionExtensions
                 ValidateAudience = true,
                 ValidAudience = jwtSettings.Audience,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+                IssuerSigningKey = signingKey,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
+            };
+
+            opt.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = ctx =>
+                {
+                    var logger = ctx.HttpContext.RequestServices
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("JwtBearer");
+                    logger.LogError(ctx.Exception,
+                        "JWT auth failed. Issuer={Issuer} Audience={Audience} KeyLen={KeyLen} Error={Msg}",
+                        jwtSettings.Issuer, jwtSettings.Audience,
+                        jwtSettings.SecretKey.Length, ctx.Exception.Message);
+                    return Task.CompletedTask;
+                }
             };
         });
 
