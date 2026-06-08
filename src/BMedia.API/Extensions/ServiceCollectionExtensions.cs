@@ -40,7 +40,10 @@ public static class ServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(jwtSettings?.SecretKey))
             throw new InvalidOperationException("Jwt:SecretKey is not configured in appsettings.json.");
 
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+        {
+            KeyId = "bmedia-key-1"
+        };
 
         services.AddAuthentication(opt =>
         {
