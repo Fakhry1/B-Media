@@ -27,9 +27,9 @@ public class GetAssetsQueryHandler : IRequestHandler<GetAssetsQuery, Result<Pagi
             .Take(request.PageSize)
             .Select(m => new MediaAssetListDto(
                 m.Id, m.OriginalFileName, m.ContentType, m.MediaType, m.Status,
-                m.PublicUrl, m.CdnUrl, m.ThumbnailUrl, m.HlsManifestUrl,
+                m.PublicUrl, m.ThumbnailUrl,
                 m.IsPrimary, m.FileSizeBytes, m.DurationSeconds,
-                m.Width, m.Height, m.CreatedAt, m.IsTranscodingComplete))
+                m.Width, m.Height, m.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return Result<PaginatedResult<MediaAssetListDto>>.Success(

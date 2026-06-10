@@ -22,13 +22,11 @@ public class UploadAssetCommandHandler : IRequestHandler<UploadAssetCommand, Res
 
     private readonly ApplicationDbContext _db;
     private readonly IStorageService _storage;
-    private readonly IMediaProcessingService _mediaProcessing;
 
-    public UploadAssetCommandHandler(ApplicationDbContext db, IStorageService storage, IMediaProcessingService mediaProcessing)
+    public UploadAssetCommandHandler(ApplicationDbContext db, IStorageService storage)
     {
         _db = db;
         _storage = storage;
-        _mediaProcessing = mediaProcessing;
     }
 
     public async Task<Result<UploadAssetResult>> Handle(UploadAssetCommand request, CancellationToken cancellationToken)
@@ -50,6 +48,7 @@ public class UploadAssetCommandHandler : IRequestHandler<UploadAssetCommand, Res
             ContentType = request.ContentType,
             FileSizeBytes = uploadResult.FileSizeBytes,
             MediaType = request.MediaType,
+            StorageProvider = StorageProvider.AzureBlob,
             Language = request.Language,
             Title = request.Title,
             Description = request.Description,
@@ -57,27 +56,11 @@ public class UploadAssetCommandHandler : IRequestHandler<UploadAssetCommand, Res
             IsPrimary = request.IsPrimary,
             SortOrder = request.SortOrder,
             ContentId = request.ContentId,
-            Status = MediaAssetStatus.Pending
+            Status = MediaAssetStatus.Ready
         };
 
         _db.MediaAssets.Add(asset);
         await _db.SaveChangesAsync(cancellationToken);
-
-        // Enqueue async processing pipeline — fire and forget (non-blocking)
-        await _mediaProcessing.EnqueueAntivirusScanAsync(asset.Id, cancellationToken);
-        await _mediaProcessing.EnqueueMetadataExtractionAsync(asset.Id, cancellationToken);
-
-        if (request.MediaType == MediaType.Video)
-        {
-            await _mediaProcessing.EnqueueTranscodingAsync(asset.Id, cancellationToken);
-            await _mediaProcessing.EnqueueThumbnailGenerationAsync(asset.Id, cancellationToken);
-        }
-
-        if (request.MediaType is MediaType.Image)
-            await _mediaProcessing.EnqueueThumbnailGenerationAsync(asset.Id, cancellationToken);
-
-        if (request.MediaType is MediaType.PDF or MediaType.Document)
-            await _mediaProcessing.EnqueueOcrAsync(asset.Id, cancellationToken);
 
         return Result<UploadAssetResult>.Created(new UploadAssetResult(asset.Id, asset.StorageKey, asset.PublicUrl));
     }

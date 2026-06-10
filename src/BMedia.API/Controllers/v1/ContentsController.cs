@@ -55,8 +55,8 @@ public class ContentsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateContentRequest request, CancellationToken cancellationToken)
     {
-        var command = new UpdateContentCommand(id, request.Title, request.Summary, request.Body, request.Language,
-            request.CategoryId, request.SubcategoryId, request.SeoTitle, request.SeoDescription, request.SeoKeywords,
+        var command = new UpdateContentCommand(id, request.Title, request.Summary, request.Language,
+            request.CategoryId, request.SubcategoryId,
             request.IsFeatured, request.AllowComments, request.TagIds);
         return ToActionResult(await Sender.Send(command, cancellationToken));
     }
@@ -72,8 +72,8 @@ public class ContentsController : BaseApiController
 }
 
 public record UpdateContentRequest(
-    string Title, string? Summary, string? Body, string Language,
-    Guid? CategoryId, Guid? SubcategoryId, string? SeoTitle, string? SeoDescription, string? SeoKeywords,
+    string Title, string? Summary, string Language,
+    Guid? CategoryId, Guid? SubcategoryId,
     bool IsFeatured, bool AllowComments, IEnumerable<Guid>? TagIds);
 
 public record TransitionWorkflowRequest(Guid TransitionId, string? Comment);

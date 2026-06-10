@@ -26,13 +26,9 @@ public class UpdateContentCommandHandler : IRequestHandler<UpdateContentCommand,
 
         content.Title = request.Title;
         content.Summary = request.Summary;
-        content.Body = request.Body;
         content.Language = request.Language;
         content.CategoryId = request.CategoryId;
         content.SubcategoryId = request.SubcategoryId;
-        content.SeoTitle = request.SeoTitle;
-        content.SeoDescription = request.SeoDescription;
-        content.SeoKeywords = request.SeoKeywords;
         content.IsFeatured = request.IsFeatured;
         content.AllowComments = request.AllowComments;
 

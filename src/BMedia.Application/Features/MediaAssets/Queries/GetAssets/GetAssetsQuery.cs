@@ -19,14 +19,11 @@ public record MediaAssetListDto(
     MediaType MediaType,
     MediaAssetStatus Status,
     string? PublicUrl,
-    string? CdnUrl,
     string? ThumbnailUrl,
-    string? HlsManifestUrl,
     bool IsPrimary,
     long FileSizeBytes,
     int? DurationSeconds,
     int? Width,
     int? Height,
-    DateTime CreatedAt,
-    bool IsTranscodingComplete
+    DateTime CreatedAt
 );

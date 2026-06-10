@@ -15,13 +15,8 @@ public class ContentConfiguration : IEntityTypeConfiguration<Content>
         builder.Property(c => c.Title).IsRequired().HasMaxLength(500);
         builder.Property(c => c.Slug).IsRequired().HasMaxLength(600);
         builder.Property(c => c.Summary).HasMaxLength(2000);
-        builder.Property(c => c.Body).HasColumnType("text");
         builder.Property(c => c.Language).IsRequired().HasMaxLength(10).HasDefaultValue("en");
         builder.Property(c => c.Status).HasConversion<int>().HasDefaultValue(ContentStatus.Draft);
-        builder.Property(c => c.SeoTitle).HasMaxLength(300);
-        builder.Property(c => c.SeoDescription).HasMaxLength(500);
-        builder.Property(c => c.SeoKeywords).HasMaxLength(500);
-        builder.Property(c => c.CanonicalUrl).HasMaxLength(2048);
         builder.Property(c => c.RowVersion).IsRowVersion();
 
         builder.HasOne(c => c.Category).WithMany(cat => cat.Contents).HasForeignKey(c => c.CategoryId).OnDelete(DeleteBehavior.SetNull);

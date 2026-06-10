@@ -28,13 +28,9 @@ public class CreateContentCommandHandler : IRequestHandler<CreateContentCommand,
             Title = request.Title,
             Slug = slug,
             Summary = request.Summary,
-            Body = request.Body,
             Language = request.Language,
             CategoryId = request.CategoryId,
             SubcategoryId = request.SubcategoryId,
-            SeoTitle = request.SeoTitle,
-            SeoDescription = request.SeoDescription,
-            SeoKeywords = request.SeoKeywords,
             ScheduledPublishAt = request.ScheduledPublishAt,
             Status = ContentStatus.Draft
         };

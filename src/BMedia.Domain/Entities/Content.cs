@@ -12,17 +12,11 @@ public class Content : BaseEntity
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string? Summary { get; set; }
-    public string? Body { get; set; }
     public string Language { get; set; } = "en";
     public ContentStatus Status { get; set; } = ContentStatus.Draft;
     public bool IsFeatured { get; set; } = false;
     public bool AllowComments { get; set; } = true;
     public int ViewCount { get; set; } = 0;
-
-    public string? SeoTitle { get; set; }
-    public string? SeoDescription { get; set; }
-    public string? SeoKeywords { get; set; }
-    public string? CanonicalUrl { get; set; }
 
     public DateTime? PublishedAt { get; set; }
     public Guid? PublishedBy { get; set; }

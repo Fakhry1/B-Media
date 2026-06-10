@@ -70,9 +70,15 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
 
-        // Storage (swap provider via config)
+        // Storage — Azure Blob by default, falls back to Local if no connection string
         services.Configure<LocalStorageOptions>(configuration.GetSection("Storage:Local"));
-        services.AddScoped<IStorageService, LocalStorageService>();
+        services.Configure<AzureBlobStorageOptions>(configuration.GetSection("Storage:Azure"));
+        var storageProvider = configuration["Storage:Provider"] ?? "Local";
+        var azureConnectionString = configuration["Storage:Azure:ConnectionString"];
+        if (storageProvider.Equals("Azure", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(azureConnectionString))
+            services.AddScoped<IStorageService, AzureBlobStorageService>();
+        else
+            services.AddScoped<IStorageService, LocalStorageService>();
 
         // Domain services
         services.AddScoped<ICacheService, RedisCacheService>();

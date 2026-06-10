@@ -30,15 +30,11 @@ public class GetContentByIdQueryHandler : IRequestHandler<GetContentByIdQuery, R
             content.Title,
             content.Slug,
             content.Summary,
-            content.Body,
             content.Language,
             content.Status,
             content.IsFeatured,
             content.AllowComments,
             content.ViewCount,
-            content.SeoTitle,
-            content.SeoDescription,
-            content.SeoKeywords,
             content.CreatedAt,
             content.PublishedAt,
             content.ScheduledPublishAt,
@@ -49,7 +45,7 @@ public class GetContentByIdQueryHandler : IRequestHandler<GetContentByIdQuery, R
             content.CurrentWorkflowStep?.Name,
             content.MediaAssets.OrderBy(m => m.SortOrder).Select(m => new MediaAssetDto(
                 m.Id, m.OriginalFileName, m.ContentType, m.MediaType, m.Status,
-                m.PublicUrl, m.CdnUrl, m.ThumbnailUrl, m.IsPrimary, m.SortOrder, m.FileSizeBytes)),
+                m.PublicUrl, m.ThumbnailUrl, m.IsPrimary, m.SortOrder, m.FileSizeBytes)),
             content.ContentTags.Select(ct => ct.Tag.Name),
             content.Localizations.Select(l => new LocalizationDto(l.Id, l.Language, l.Title, l.Summary, l.IsApproved))
         );

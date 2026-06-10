@@ -140,9 +140,6 @@ public class LocalizationConfiguration : IEntityTypeConfiguration<Localization>
         builder.Property(l => l.Language).IsRequired().HasMaxLength(10);
         builder.Property(l => l.Title).IsRequired().HasMaxLength(500);
         builder.Property(l => l.Summary).HasMaxLength(2000);
-        builder.Property(l => l.Body).HasColumnType("text");
-        builder.Property(l => l.SeoTitle).HasMaxLength(300);
-        builder.Property(l => l.SeoDescription).HasMaxLength(500);
         builder.Property(l => l.RowVersion).IsRowVersion();
         builder.HasOne(l => l.Content).WithMany(c => c.Localizations).HasForeignKey(l => l.ContentId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(l => new { l.ContentId, l.Language }).IsUnique().HasFilter("is_deleted = false");

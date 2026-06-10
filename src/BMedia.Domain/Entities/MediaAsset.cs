@@ -12,12 +12,11 @@ public class MediaAsset : BaseEntity
     public string OriginalFileName { get; set; } = string.Empty;
     public string StorageKey { get; set; } = string.Empty;
     public string? PublicUrl { get; set; }
-    public string? CdnUrl { get; set; }
     public string ContentType { get; set; } = string.Empty;
     public long FileSizeBytes { get; set; }
     public MediaType MediaType { get; set; }
     public MediaAssetStatus Status { get; set; } = MediaAssetStatus.Pending;
-    public StorageProvider StorageProvider { get; set; } = StorageProvider.Local;
+    public StorageProvider StorageProvider { get; set; } = StorageProvider.AzureBlob;
 
     public string? Title { get; set; }
     public string? Description { get; set; }
@@ -27,25 +26,8 @@ public class MediaAsset : BaseEntity
     public int? DurationSeconds { get; set; }
     public int? Width { get; set; }
     public int? Height { get; set; }
-    public double? AspectRatio { get; set; }
-    public string? Codec { get; set; }
-    public int? Bitrate { get; set; }
-    public double? FrameRate { get; set; }
 
     public string? ThumbnailUrl { get; set; }
-    public string? PreviewUrl { get; set; }
-    public string? HlsManifestUrl { get; set; }
-
-    public bool IsTranscodingComplete { get; set; } = false;
-    public bool IsThumbnailGenerated { get; set; } = false;
-    public bool IsMetadataExtracted { get; set; } = false;
-    public bool AntivirusScanPassed { get; set; } = false;
-    public DateTime? AntivirusScannedAt { get; set; }
-
-    public string? ExtractedMetadata { get; set; }
-    public string? AiGeneratedTags { get; set; }
-    public string? OcrText { get; set; }
-    public bool IsWatermarked { get; set; } = false;
 
     public int SortOrder { get; set; } = 0;
     public bool IsPrimary { get; set; } = false;
