@@ -1477,6 +1477,53 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                     b.HasIndex("PermissionId");
 
                     b.ToTable("RolePermissions", (string)null);
+
+                    b.HasData(
+                        // Administrator: all 17 permissions
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000001"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000002"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000003"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000004"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000005"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000007"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000008"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000009"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000010"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000011"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000012"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000013"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000014"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000015"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000016"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000001"), PermissionId = new Guid("20000000-0000-0000-0000-000000000017"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // ContentCreator: CreateContent, EditContent, ViewContent, UploadMedia, ManageMedia
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000002"), PermissionId = new Guid("20000000-0000-0000-0000-000000000001"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000002"), PermissionId = new Guid("20000000-0000-0000-0000-000000000002"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000002"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000002"), PermissionId = new Guid("20000000-0000-0000-0000-000000000007"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000002"), PermissionId = new Guid("20000000-0000-0000-0000-000000000009"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // Reviewer: ViewContent, ApproveReview, RejectReview, TransitionWorkflow
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000003"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000003"), PermissionId = new Guid("20000000-0000-0000-0000-000000000010"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000003"), PermissionId = new Guid("20000000-0000-0000-0000-000000000011"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000003"), PermissionId = new Guid("20000000-0000-0000-0000-000000000012"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // LanguageReviewer: EditContent, ViewContent
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000004"), PermissionId = new Guid("20000000-0000-0000-0000-000000000002"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000004"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // Designer: ViewContent, UploadMedia, DeleteMedia, ManageMedia
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000005"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000005"), PermissionId = new Guid("20000000-0000-0000-0000-000000000007"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000005"), PermissionId = new Guid("20000000-0000-0000-0000-000000000008"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000005"), PermissionId = new Guid("20000000-0000-0000-0000-000000000009"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // Publisher: PublishContent, ViewContent, TransitionWorkflow
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000006"), PermissionId = new Guid("20000000-0000-0000-0000-000000000004"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000006"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000006"), PermissionId = new Guid("20000000-0000-0000-0000-000000000012"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        // Archivist: ArchiveContent, ViewContent
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000007"), PermissionId = new Guid("20000000-0000-0000-0000-000000000005"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) },
+                        new { RoleId = new Guid("10000000-0000-0000-0000-000000000007"), PermissionId = new Guid("20000000-0000-0000-0000-000000000006"), GrantedAt = new DateTime(2026, 5, 18, 0, 0, 0, DateTimeKind.Utc) }
+                    );
                 });
 
             modelBuilder.Entity("BMedia.Domain.Entities.ScheduledPublication", b =>
