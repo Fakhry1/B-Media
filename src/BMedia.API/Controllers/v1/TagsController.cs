@@ -12,6 +12,7 @@ public class TagsController : BaseApiController
 {
     /// <summary>Search and list tags.</summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default)
         => ToActionResult(await Sender.Send(new GetTagsQuery(search, page, pageSize), cancellationToken));
 

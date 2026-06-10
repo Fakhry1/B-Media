@@ -23,6 +23,7 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
     public Task<AuthorizationPolicy> GetDefaultPolicyAsync() =>
         _fallback.GetDefaultPolicyAsync();
 
+    // Explicitly null — never require auth on endpoints that have no [Authorize] attribute
     public Task<AuthorizationPolicy?> GetFallbackPolicyAsync() =>
-        _fallback.GetFallbackPolicyAsync();
+        Task.FromResult<AuthorizationPolicy?>(null);
 }
