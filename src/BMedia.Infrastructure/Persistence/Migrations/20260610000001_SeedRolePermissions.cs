@@ -27,7 +27,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
         {
             // Insert only rows that don't already exist (idempotent)
             migrationBuilder.Sql(@"
-INSERT INTO ""RolePermissions"" (role_id, permission_id, granted_at)
+INSERT INTO role_permissions (role_id, permission_id, granted_at)
 SELECT vals.role_id, vals.permission_id, vals.granted_at
 FROM (VALUES
     -- Administrator: all 17 permissions
@@ -76,7 +76,7 @@ FROM (VALUES
     ('10000000-0000-0000-0000-000000000007'::uuid, '20000000-0000-0000-0000-000000000006'::uuid, '2026-05-18 00:00:00+00')
 ) AS vals(role_id, permission_id, granted_at)
 WHERE NOT EXISTS (
-    SELECT 1 FROM ""RolePermissions"" rp
+    SELECT 1 FROM role_permissions rp
     WHERE rp.role_id = vals.role_id AND rp.permission_id = vals.permission_id
 );
 ");
@@ -86,7 +86,7 @@ WHERE NOT EXISTS (
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-DELETE FROM ""RolePermissions""
+DELETE FROM role_permissions
 WHERE role_id IN (
     '10000000-0000-0000-0000-000000000001',
     '10000000-0000-0000-0000-000000000002',
