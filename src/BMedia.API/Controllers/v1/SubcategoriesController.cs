@@ -8,14 +8,12 @@ namespace BMedia.API.Controllers.v1;
 
 /// <summary>Subcategory management within a parent category.</summary>
 [ApiVersion("1.0")]
-[Authorize]
 public class SubcategoriesController : BaseApiController
 {
     /// <summary>Get subcategories — optionally filtered by category.</summary>
     /// <param name="categoryId">Filter by parent category ID (optional).</param>
     /// <param name="activeOnly">Return only active subcategories (default true).</param>
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IActionResult> GetAll(
         [FromQuery] Guid? categoryId = null,
         [FromQuery] bool activeOnly = true,
@@ -24,7 +22,6 @@ public class SubcategoriesController : BaseApiController
 
     /// <summary>Get a single subcategory by ID.</summary>
     [HttpGet("{id:guid}")]
-    [AllowAnonymous]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
         => ToActionResult(await Sender.Send(new GetSubcategoryByIdQuery(id), cancellationToken));
 
