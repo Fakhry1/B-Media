@@ -97,6 +97,22 @@ app.UseSerilogRequestLogging(opt =>
 app.UseCors("DefaultCors");
 app.UseRateLimiter();
 app.UseAuthentication();
+
+// Diagnostic: log which endpoint is matched and its auth metadata
+app.Use(async (context, next) =>
+{
+    var endpoint = context.GetEndpoint();
+    if (endpoint is not null)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("EndpointDiag");
+        var hasAllowAnon = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
+        var hasAuthorize = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>() is not null;
+        logger.LogInformation("DIAG Endpoint={Name} AllowAnonymous={Anon} HasAuthorize={Auth}",
+            endpoint.DisplayName, hasAllowAnon, hasAuthorize);
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();
