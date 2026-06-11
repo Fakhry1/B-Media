@@ -8,6 +8,13 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
+        // Administrator role bypasses all individual permission checks
+        if (context.User.IsInRole("Administrator"))
+        {
+            context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
+
         if (context.User.HasClaim("permission", requirement.Permission))
             context.Succeed(requirement);
 
