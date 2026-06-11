@@ -784,9 +784,10 @@ VALUES (
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES
-  ('20260518000000_InitialCreate',        '9.0.4'),
-  ('20260520133336_InitialDatabase',      '9.0.4'),
-  ('20260610000001_SeedRolePermissions',  '9.0.4')
+  ('20260518000000_InitialCreate',                  '9.0.4'),
+  ('20260520133336_InitialDatabase',                '9.0.4'),
+  ('20260610000001_SeedRolePermissions',            '9.0.4'),
+  ('20260611000001_DropRemovedMediaAssetColumns',   '9.0.4')
 ON CONFLICT ("MigrationId") DO NOTHING;
 
 COMMIT;
