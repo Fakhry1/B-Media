@@ -40,28 +40,37 @@ public class UploadAssetCommandHandler : IRequestHandler<UploadAssetCommand, Res
         var folder = request.ContentId.HasValue ? $"content/{request.ContentId}" : "assets";
         var uploadResult = await _storage.UploadAsync(request.FileStream, request.OriginalFileName, request.ContentType, folder, cancellationToken);
 
-        var asset = new MediaAsset
+        try
         {
-            OriginalFileName = request.OriginalFileName,
-            StorageKey = uploadResult.StorageKey,
-            PublicUrl = uploadResult.PublicUrl,
-            ContentType = request.ContentType,
-            FileSizeBytes = uploadResult.FileSizeBytes,
-            MediaType = request.MediaType,
-            StorageProvider = StorageProvider.AzureBlob,
-            Language = request.Language,
-            Title = request.Title,
-            Description = request.Description,
-            AltText = request.AltText,
-            IsPrimary = request.IsPrimary,
-            SortOrder = request.SortOrder,
-            ContentId = request.ContentId,
-            Status = MediaAssetStatus.Ready
-        };
+            var asset = new MediaAsset
+            {
+                OriginalFileName = request.OriginalFileName,
+                StorageKey = uploadResult.StorageKey,
+                PublicUrl = uploadResult.PublicUrl,
+                ContentType = request.ContentType,
+                FileSizeBytes = uploadResult.FileSizeBytes,
+                MediaType = request.MediaType,
+                StorageProvider = StorageProvider.AzureBlob,
+                Language = request.Language,
+                Title = request.Title,
+                Description = request.Description,
+                AltText = request.AltText,
+                IsPrimary = request.IsPrimary,
+                SortOrder = request.SortOrder,
+                ContentId = request.ContentId,
+                Status = MediaAssetStatus.Ready
+            };
 
-        _db.MediaAssets.Add(asset);
-        await _db.SaveChangesAsync(cancellationToken);
+            _db.MediaAssets.Add(asset);
+            await _db.SaveChangesAsync(cancellationToken);
 
-        return Result<UploadAssetResult>.Created(new UploadAssetResult(asset.Id, asset.StorageKey, asset.PublicUrl));
+            return Result<UploadAssetResult>.Created(new UploadAssetResult(asset.Id, asset.StorageKey, asset.PublicUrl));
+        }
+        catch
+        {
+            // DB save failed — roll back the blob to keep storage consistent
+            await _storage.DeleteAsync(uploadResult.StorageKey, CancellationToken.None);
+            throw;
+        }
     }
 }
