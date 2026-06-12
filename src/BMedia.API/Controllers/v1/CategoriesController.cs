@@ -21,4 +21,20 @@ public class CategoriesController : BaseApiController
     [Authorize(Policy = "ManageCategories")]
     public async Task<IActionResult> Create([FromBody] CreateCategoryCommand command, CancellationToken cancellationToken)
         => ToActionResult(await Sender.Send(command, cancellationToken));
+
+    /// <summary>Update an existing category.</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "ManageCategories")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest request, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(
+            new UpdateCategoryCommand(id, request.Name, request.Description, request.IconUrl, request.SortOrder, request.IsActive),
+            cancellationToken));
+
+    /// <summary>Delete (soft-delete) a category.</summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "ManageCategories")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(new DeleteCategoryCommand(id), cancellationToken));
 }
+
+public record UpdateCategoryRequest(string Name, string? Description, string? IconUrl, int SortOrder, bool IsActive = true);
