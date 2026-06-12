@@ -3,6 +3,7 @@ using BMedia.Application.Features.Contents.Commands.CreateContent;
 using BMedia.Application.Features.Contents.Commands.DeleteContent;
 using BMedia.Application.Features.Contents.Commands.TransitionWorkflow;
 using BMedia.Application.Features.Contents.Commands.UpdateContent;
+using BMedia.Application.Features.Contents.Commands.UpdateContentStatus;
 using BMedia.Application.Features.Contents.Queries.GetAvailableTransitions;
 using BMedia.Application.Features.Contents.Queries.GetContentById;
 using BMedia.Application.Features.Contents.Queries.GetContents;
@@ -62,6 +63,14 @@ public class ContentsController : BaseApiController
         return ToActionResult(await Sender.Send(command, cancellationToken));
     }
 
+    /// <summary>Directly update content status (bypasses workflow — for admins).</summary>
+    [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(
+            new UpdateContentStatusCommand(id, request.Status, request.Comment), cancellationToken));
+
     /// <summary>Get available workflow transitions for a content item.</summary>
     [HttpGet("{id:guid}/workflow/transitions")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -85,3 +94,4 @@ public record UpdateContentRequest(
     bool IsFeatured, bool AllowComments, IEnumerable<Guid>? TagIds);
 
 public record TransitionWorkflowRequest(Guid TransitionId, string? Comment);
+public record UpdateStatusRequest(ContentStatus Status, string? Comment);
