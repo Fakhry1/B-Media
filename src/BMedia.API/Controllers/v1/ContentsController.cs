@@ -3,6 +3,7 @@ using BMedia.Application.Features.Contents.Commands.CreateContent;
 using BMedia.Application.Features.Contents.Commands.DeleteContent;
 using BMedia.Application.Features.Contents.Commands.TransitionWorkflow;
 using BMedia.Application.Features.Contents.Commands.UpdateContent;
+using BMedia.Application.Features.Contents.Queries.GetAvailableTransitions;
 using BMedia.Application.Features.Contents.Queries.GetContentById;
 using BMedia.Application.Features.Contents.Queries.GetContents;
 using BMedia.Domain.Enums;
@@ -60,6 +61,13 @@ public class ContentsController : BaseApiController
             request.IsFeatured, request.AllowComments, request.TagIds);
         return ToActionResult(await Sender.Send(command, cancellationToken));
     }
+
+    /// <summary>Get available workflow transitions for a content item.</summary>
+    [HttpGet("{id:guid}/workflow/transitions")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTransitions(Guid id, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(new GetAvailableTransitionsQuery(id), cancellationToken));
 
     /// <summary>Transition content through a workflow step.</summary>
     [HttpPost("{id:guid}/workflow/transition")]
