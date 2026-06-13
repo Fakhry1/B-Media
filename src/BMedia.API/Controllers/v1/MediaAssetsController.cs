@@ -2,6 +2,7 @@ using Asp.Versioning;
 using BMedia.Application.Features.MediaAssets.Commands.DeleteMediaAsset;
 using BMedia.Application.Features.MediaAssets.Commands.UploadAsset;
 using BMedia.Application.Features.MediaAssets.Queries.GetAssets;
+using BMedia.Application.Features.MediaAssets.Queries.GetSignedUrl;
 using BMedia.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -54,6 +55,14 @@ public class MediaAssetsController : BaseApiController
 
         return ToActionResult(await Sender.Send(command, cancellationToken));
     }
+
+    /// <summary>Generate a time-limited signed URL for streaming a private asset.</summary>
+    [HttpGet("{id:guid}/url")]
+    [EnableRateLimiting("api")]
+    [ProducesResponseType(typeof(SignedUrlDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSignedUrl(Guid id, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(new GetSignedUrlQuery(id), cancellationToken));
 
     /// <summary>Delete (soft-delete) a media asset.</summary>
     [HttpDelete("{id:guid}")]
