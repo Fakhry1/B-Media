@@ -69,6 +69,7 @@ export default function AudioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Player state
   const [playing, setPlaying] = useState<PublicItem | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -76,14 +77,20 @@ export default function AudioPage() {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Find fixed category
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => setPageCategory(cats.find(c => c.name === CATEGORY_NAME) ?? null))
-      .catch(() => {});
+      .then(cats => {
+        const cat = cats.find(c => c.name === CATEGORY_NAME) ?? null;
+        setPageCategory(cat);
+        if (!cat) setLoading(false);
+      })
+      .catch(e => { if (e.name !== "AbortError") { setError(true); setLoading(false); } });
     return () => ctrl.abort();
   }, []);
 
+  // Fetch content
   useEffect(() => {
     if (!pageCategory) return;
     const ctrl = new AbortController();
@@ -98,6 +105,7 @@ export default function AudioPage() {
     return () => ctrl.abort();
   }, [pageCategory, page, subId]);
 
+  // Audio element sync
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -112,6 +120,7 @@ export default function AudioPage() {
     return () => { audio.removeEventListener("timeupdate", onTime); audio.removeEventListener("ended", onEnded); };
   }, [items, playing]);
 
+  // When src changes, play
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !audioSrc) return;
@@ -159,6 +168,7 @@ export default function AudioPage() {
       paddingBottom: playing ? 90 : 0 }}>
       <Header />
       <main style={{ flex: 1 }}>
+        {/* Hero + tabs */}
         <div style={{ padding: "28px 0 0", borderBottom: "1px solid var(--line)" }}>
           <div className="container-main">
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", fontFamily: "'Noto Kufi Arabic',sans-serif" }}>
@@ -183,6 +193,8 @@ export default function AudioPage() {
             </div>
           </div>
         </div>
+
+        {/* List */}
         <div className="container-main" style={{ padding: "28px 0 48px" }}>
           {error && <p style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>حدث خطأ أثناء التحميل</p>}
           {loading ? (
@@ -203,9 +215,11 @@ export default function AudioPage() {
                       borderInlineStart: isActive ? "4px solid var(--gold)" : "1px solid var(--line)",
                       transition: "all .15s", cursor: "pointer" }}
                     onClick={() => handlePlay(item)}>
+                    {/* Index */}
                     <span style={{ fontSize: 12, color: "var(--muted-2)", width: 22, textAlign: "center", flexShrink: 0 }}>
                       {String(idx + 1 + (page - 1) * PAGE_SIZE).padStart(2, "0")}
                     </span>
+                    {/* Play button */}
                     <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
                       background: isActive ? "var(--gold)" : "var(--surface-2)",
                       border: `1.5px solid ${isActive ? "var(--gold)" : "var(--line)"}`,
@@ -221,6 +235,7 @@ export default function AudioPage() {
                         </svg>
                       )}
                     </div>
+                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ color: "var(--ink)", fontWeight: isActive ? 700 : 500, fontSize: 14,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</p>
@@ -241,11 +256,16 @@ export default function AudioPage() {
           <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </div>
       </main>
+
+      {/* Hidden audio element */}
       <audio ref={audioRef} style={{ display: "none" }} />
+
+      {/* Sticky player */}
       {playing && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
           background: "var(--surface)", borderTop: "1px solid var(--line-gold)",
           boxShadow: "0 -4px 24px rgba(0,0,0,.15)", padding: "12px 24px" }}>
+          {/* Progress bar */}
           <div style={{ height: 3, background: "var(--line)", borderRadius: 99, marginBottom: 12, cursor: "pointer" }}
             onClick={e => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -256,11 +276,13 @@ export default function AudioPage() {
             <div style={{ height: "100%", borderRadius: 99, background: "var(--gold)", width: `${progress}%`, transition: "width .3s linear" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, maxWidth: 1280, margin: "0 auto" }}>
+            {/* Track info */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ color: "var(--ink)", fontWeight: 600, fontSize: 14, overflow: "hidden",
                 textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{playing.title}</p>
               <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>{playing.categoryName}</p>
             </div>
+            {/* Controls */}
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button onClick={handlePrev} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid var(--line)",
                 background: "var(--surface-2)", cursor: "pointer", fontSize: 15, color: "var(--ink)" }}>⏮</button>

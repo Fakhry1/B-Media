@@ -185,14 +185,20 @@ export default function VideoPage() {
 
   const modalItem = items.find(i => i.id === activeModal) ?? null;
 
+  // Find the fixed category
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => setPageCategory(cats.find(c => c.name === CATEGORY_NAME) ?? null))
-      .catch(() => {});
+      .then(cats => {
+        const cat = cats.find(c => c.name === CATEGORY_NAME) ?? null;
+        setPageCategory(cat);
+        if (!cat) setLoading(false);
+      })
+      .catch(e => { if (e.name !== "AbortError") { setError(true); setLoading(false); } });
     return () => ctrl.abort();
   }, []);
 
+  // Fetch content once category is known
   useEffect(() => {
     if (!pageCategory) return;
     const ctrl = new AbortController();
@@ -216,12 +222,15 @@ export default function VideoPage() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <Header />
       <main style={{ flex: 1 }}>
+        {/* Hero */}
         <div style={{ padding: "28px 0 0", borderBottom: "1px solid var(--line)" }}>
           <div className="container-main">
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", fontFamily: "'Noto Kufi Arabic',sans-serif" }}>
               🎬 {CATEGORY_NAME}
             </h1>
             <p style={{ color: "var(--muted)", marginTop: 4, fontSize: 14 }}>استعرض جميع مقاطع الفيديو</p>
+
+            {/* Subcategory tabs */}
             <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "16px 0 0", scrollbarWidth: "none" }}>
               <button onClick={() => handleSub(null)}
                 style={{ flexShrink: 0, padding: "7px 20px", borderRadius: 999, border: "1px solid",
@@ -244,6 +253,8 @@ export default function VideoPage() {
             </div>
           </div>
         </div>
+
+        {/* Content */}
         <div className="container-main" style={{ padding: "32px 0 48px" }}>
           {error && <p style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>حدث خطأ أثناء التحميل</p>}
           {loading ? (
