@@ -22,6 +22,7 @@ public class ContentsController : BaseApiController
 {
     /// <summary>List contents with filtering, sorting, and pagination.</summary>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
@@ -29,15 +30,18 @@ public class ContentsController : BaseApiController
         [FromQuery] string? search = null,
         [FromQuery] ContentStatus? status = null,
         [FromQuery] Guid? categoryId = null,
+        [FromQuery] Guid? subcategoryId = null,
         [FromQuery] string? language = null,
         [FromQuery] bool? isFeatured = null,
         [FromQuery] string? sortBy = null,
         [FromQuery] bool sortDescending = true,
+        [FromQuery] MediaType? mediaType = null,
         CancellationToken cancellationToken = default)
-        => ToActionResult(await Sender.Send(new GetContentsQuery(page, pageSize, search, status, categoryId, language, isFeatured, sortBy, sortDescending), cancellationToken));
+        => ToActionResult(await Sender.Send(new GetContentsQuery(page, pageSize, search, status, categoryId, subcategoryId, language, isFeatured, sortBy, sortDescending, mediaType), cancellationToken));
 
     /// <summary>Get a content item by ID.</summary>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ContentDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)

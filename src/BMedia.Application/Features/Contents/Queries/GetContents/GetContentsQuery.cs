@@ -10,10 +10,12 @@ public record GetContentsQuery(
     string? Search = null,
     ContentStatus? Status = null,
     Guid? CategoryId = null,
+    Guid? SubcategoryId = null,
     string? Language = null,
     bool? IsFeatured = null,
     string? SortBy = null,
-    bool SortDescending = true
+    bool SortDescending = true,
+    MediaType? MediaType = null
 ) : IRequest<Result<PaginatedResult<ContentListDto>>>;
 
 public record ContentListDto(

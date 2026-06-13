@@ -35,6 +35,12 @@ public class GetContentsQueryHandler : IRequestHandler<GetContentsQuery, Result<
         if (request.IsFeatured.HasValue)
             query = query.Where(c => c.IsFeatured == request.IsFeatured.Value);
 
+        if (request.SubcategoryId.HasValue)
+            query = query.Where(c => c.SubcategoryId == request.SubcategoryId.Value);
+
+        if (request.MediaType.HasValue)
+            query = query.Where(c => c.MediaAssets.Any(m => m.MediaType == request.MediaType.Value && !m.IsDeleted));
+
         query = request.SortBy?.ToLower() switch
         {
             "title" => request.SortDescending ? query.OrderByDescending(c => c.Title) : query.OrderBy(c => c.Title),

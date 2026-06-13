@@ -58,6 +58,7 @@ public class MediaAssetsController : BaseApiController
 
     /// <summary>Generate a time-limited signed URL for streaming a private asset.</summary>
     [HttpGet("{id:guid}/url")]
+    [AllowAnonymous]
     [EnableRateLimiting("api")]
     [ProducesResponseType(typeof(SignedUrlDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
