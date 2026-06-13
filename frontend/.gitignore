@@ -5,4 +5,4 @@ out/
 *.local
 .env.local
 .env.*.local
-frontend/tsconfig.tsbuildinfo
+tsconfig.tsbuildinfo
