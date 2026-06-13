@@ -23,30 +23,31 @@ interface Slide {
   url: string;
 }
 
-/** Try to resolve a display URL for one content item. Priority:
- *  1. thumbnailUrl (already public)
- *  2. Image asset signed URL
- *  3. First available asset signed URL (last resort) */
+/** Resolve ONE display URL per content item.
+ *  Uses the FIRST image asset found; falls back to thumbnailUrl. */
 async function resolveSlideUrl(
   item: { id: string; thumbnailUrl: string | null },
   signal: AbortSignal
 ): Promise<string | null> {
-  if (item.thumbnailUrl) return item.thumbnailUrl;
-
   try {
     const detail = await fetchPublicDetail(item.id, signal);
-    if (!detail.mediaAssets.length) return null;
 
-    const imageAsset = detail.mediaAssets.find(a =>
+    // pick the first image asset only
+    const firstImage = detail.mediaAssets.find(a =>
       ["Image", "image", "2", "Photo", "photo"].includes(a.mediaType)
     );
-    const asset = imageAsset ?? detail.mediaAssets[0];
 
-    const { url } = await fetchSignedUrl(asset.id, signal);
-    return url;
+    if (firstImage) {
+      const { url } = await fetchSignedUrl(firstImage.id, signal);
+      return url;
+    }
+
+    // no image asset → fall back to thumbnailUrl if set
+    return item.thumbnailUrl ?? null;
   } catch (e) {
     console.warn("[Slider] resolveSlideUrl failed:", e);
-    return null;
+    // last resort: use thumbnailUrl if available
+    return item.thumbnailUrl ?? null;
   }
 }
 
