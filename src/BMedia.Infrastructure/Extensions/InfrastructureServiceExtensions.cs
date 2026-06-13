@@ -39,12 +39,19 @@ public static class InfrastructureServiceExtensions
             options.UseSnakeCaseNamingConvention();
         });
 
-        // Redis — use in-memory distributed cache in Development if Redis is unavailable
-        services.AddStackExchangeRedisCache(opt =>
+        // Redis — use in-memory distributed cache in Development, Redis in Production
+        if (isDevelopment)
         {
-            opt.Configuration = configuration.GetConnectionString("Redis");
-            opt.InstanceName = "BMedia:";
-        });
+            services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            services.AddStackExchangeRedisCache(opt =>
+            {
+                opt.Configuration = configuration.GetConnectionString("Redis");
+                opt.InstanceName = "BMedia:";
+            });
+        }
 
         // Hangfire — InMemory in Development, PostgreSQL in Production
         if (isDevelopment)

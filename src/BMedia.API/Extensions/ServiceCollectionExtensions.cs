@@ -163,9 +163,12 @@ public static class ServiceCollectionExtensions
 
     private static void AddHealthChecks(IServiceCollection services, IConfiguration configuration)
     {
-        services.AddHealthChecks()
-            .AddNpgSql(configuration.GetConnectionString("DefaultConnection")!, name: "postgresql", tags: ["db", "sql"])
-            .AddRedis(configuration.GetConnectionString("Redis")!, name: "redis", tags: ["cache"]);
+        var hc = services.AddHealthChecks()
+            .AddNpgSql(configuration.GetConnectionString("DefaultConnection")!, name: "postgresql", tags: ["db", "sql"]);
+
+        var redisConn = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConn))
+            hc.AddRedis(redisConn, name: "redis", tags: ["cache"]);
     }
 
     private static void AddCors(IServiceCollection services, IConfiguration configuration)
