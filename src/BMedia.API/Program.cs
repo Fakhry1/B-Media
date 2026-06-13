@@ -47,10 +47,41 @@ using (var scope = app.Services.CreateScope())
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Database.MigrateAsync();
         logger.LogInformation("Database migrations applied successfully");
+
+        // Seed default admin user if no users exist
+        if (!db.Users.Any())
+        {
+            var hasher = scope.ServiceProvider.GetRequiredService<BMedia.Domain.Interfaces.IPasswordHasher>();
+            var adminRoleId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+            var adminUserId = Guid.Parse("A0000000-0000-0000-0000-000000000001");
+
+            var admin = new BMedia.Domain.Entities.User
+            {
+                Id = adminUserId,
+                Username = "admin",
+                Email = "admin@bmedia.io",
+                PasswordHash = hasher.Hash("Admin@1234"),
+                FirstName = "Admin",
+                LastName = "User",
+                IsActive = true,
+                IsEmailVerified = true,
+                PreferredLanguage = "ar",
+            };
+
+            var adminRole = await db.Roles.FindAsync(adminRoleId);
+            if (adminRole is not null)
+            {
+                admin.UserRoles = [new BMedia.Domain.Entities.UserRole { UserId = adminUserId, RoleId = adminRoleId }];
+            }
+
+            db.Users.Add(admin);
+            await db.SaveChangesAsync();
+            logger.LogInformation("Default admin user seeded — Email: admin@bmedia.io / Password: Admin@1234");
+        }
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Migration step skipped — database may already be at the latest schema version");
+        logger.LogWarning(ex, "Migration/seed step skipped — database may already be at the latest schema version");
     }
 }
 

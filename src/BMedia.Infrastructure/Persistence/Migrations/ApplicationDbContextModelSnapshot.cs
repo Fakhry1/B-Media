@@ -246,7 +246,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Categories", (string)null);
                 });
@@ -379,7 +379,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.HasIndex("Status");
 
@@ -561,7 +561,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ContentId", "Language")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Localizations", (string)null);
                 });
@@ -738,7 +738,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("StorageKey")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.HasIndex("ContentId", "IsPrimary");
 
@@ -989,7 +989,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Permissions", (string)null);
 
@@ -1381,7 +1381,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Roles", (string)null);
 
@@ -1655,7 +1655,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Subcategories", (string)null);
                 });
@@ -1715,7 +1715,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Tags", (string)null);
                 });
@@ -1831,7 +1831,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.HasIndex("IsActive");
 
@@ -1839,7 +1839,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Username")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("Users", (string)null);
                 });

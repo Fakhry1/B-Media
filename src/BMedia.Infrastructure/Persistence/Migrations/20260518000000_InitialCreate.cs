@@ -34,7 +34,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                 },
                 constraints: table => table.PrimaryKey("pk_roles", x => x.id));
 
-            migrationBuilder.CreateIndex(name: "ix_roles_normalized_name", table: "Roles", column: "normalized_name", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_roles_normalized_name", table: "Roles", column: "normalized_name", unique: true, filter: "is_deleted = false");
 
             // ===================== PERMISSIONS =====================
             migrationBuilder.CreateTable(
@@ -57,7 +57,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                 },
                 constraints: table => table.PrimaryKey("pk_permissions", x => x.id));
 
-            migrationBuilder.CreateIndex(name: "ix_permissions_normalized_name", table: "Permissions", column: "normalized_name", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_permissions_normalized_name", table: "Permissions", column: "normalized_name", unique: true, filter: "is_deleted = false");
             migrationBuilder.CreateIndex(name: "ix_permissions_module", table: "Permissions", column: "module");
 
             // ===================== USERS =====================
@@ -96,8 +96,8 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                 },
                 constraints: table => table.PrimaryKey("pk_users", x => x.id));
 
-            migrationBuilder.CreateIndex(name: "ix_users_email", table: "Users", column: "email", unique: true, filter: "\"IsDeleted\" = false");
-            migrationBuilder.CreateIndex(name: "ix_users_username", table: "Users", column: "username", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_users_email", table: "Users", column: "email", unique: true, filter: "is_deleted = false");
+            migrationBuilder.CreateIndex(name: "ix_users_username", table: "Users", column: "username", unique: true, filter: "is_deleted = false");
             migrationBuilder.CreateIndex(name: "ix_users_is_deleted", table: "Users", column: "is_deleted");
             migrationBuilder.CreateIndex(name: "ix_users_is_active", table: "Users", column: "is_active");
 
@@ -195,7 +195,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                 },
                 constraints: table => table.PrimaryKey("pk_categories", x => x.id));
 
-            migrationBuilder.CreateIndex(name: "ix_categories_slug", table: "Categories", column: "slug", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_categories_slug", table: "Categories", column: "slug", unique: true, filter: "is_deleted = false");
 
             // ===================== SUBCATEGORIES =====================
             migrationBuilder.CreateTable(
@@ -224,7 +224,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                     table.ForeignKey(name: "fk_subcategories_categories_category_id", column: x => x.category_id, principalTable: "Categories", principalColumn: "id", onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(name: "ix_subcategories_slug", table: "Subcategories", column: "slug", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_subcategories_slug", table: "Subcategories", column: "slug", unique: true, filter: "is_deleted = false");
             migrationBuilder.CreateIndex(name: "ix_subcategories_category_id", table: "Subcategories", column: "category_id");
 
             // ===================== TAGS =====================
@@ -248,7 +248,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                 },
                 constraints: table => table.PrimaryKey("pk_tags", x => x.id));
 
-            migrationBuilder.CreateIndex(name: "ix_tags_slug", table: "Tags", column: "slug", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_tags_slug", table: "Tags", column: "slug", unique: true, filter: "is_deleted = false");
 
             // ===================== WORKFLOW DEFINITIONS =====================
             migrationBuilder.CreateTable(
@@ -386,7 +386,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                     table.ForeignKey(name: "fk_contents_workflow_steps_current_workflow_step_id", column: x => x.current_workflow_step_id, principalTable: "WorkflowSteps", principalColumn: "id", onDelete: ReferentialAction.SetNull);
                 });
 
-            migrationBuilder.CreateIndex(name: "ix_contents_slug", table: "Contents", column: "slug", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_contents_slug", table: "Contents", column: "slug", unique: true, filter: "is_deleted = false");
             migrationBuilder.CreateIndex(name: "ix_contents_status", table: "Contents", column: "status");
             migrationBuilder.CreateIndex(name: "ix_contents_language", table: "Contents", column: "language");
             migrationBuilder.CreateIndex(name: "ix_contents_is_featured", table: "Contents", column: "is_featured");
@@ -471,7 +471,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(name: "ix_media_assets_content_id", table: "MediaAssets", column: "content_id");
             migrationBuilder.CreateIndex(name: "ix_media_assets_media_type", table: "MediaAssets", column: "media_type");
             migrationBuilder.CreateIndex(name: "ix_media_assets_status", table: "MediaAssets", column: "status");
-            migrationBuilder.CreateIndex(name: "ix_media_assets_storage_key", table: "MediaAssets", column: "storage_key", unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_media_assets_storage_key", table: "MediaAssets", column: "storage_key", unique: true, filter: "is_deleted = false");
             migrationBuilder.CreateIndex(name: "ix_media_assets_content_id_is_primary", table: "MediaAssets", columns: new[] { "content_id", "is_primary" });
 
             // ===================== MEDIA VERSIONS =====================
@@ -546,7 +546,7 @@ namespace BMedia.Infrastructure.Persistence.Migrations
                     table.ForeignKey(name: "fk_localizations_contents_content_id", column: x => x.content_id, principalTable: "Contents", principalColumn: "id", onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(name: "ix_localizations_content_id_language", table: "Localizations", columns: new[] { "content_id", "language" }, unique: true, filter: "\"IsDeleted\" = false");
+            migrationBuilder.CreateIndex(name: "ix_localizations_content_id_language", table: "Localizations", columns: new[] { "content_id", "language" }, unique: true, filter: "is_deleted = false");
 
             // ===================== ATTACHMENTS =====================
             migrationBuilder.CreateTable(
