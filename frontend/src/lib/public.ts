@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:44344";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function pfetch<T>(path: string, signal?: AbortSignal): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { signal, cache: "no-store" });
