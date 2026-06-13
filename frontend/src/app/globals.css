@@ -94,3 +94,11 @@ a { color: inherit; text-decoration: none; }
 
 .animate-fade-up { animation: fadeUp .6s ease both; }
 .animate-pulse-dot { animation: pulseDot 2s infinite; }
+
+.container-main {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px)  { .container-main { padding-inline: 1.5rem; } }
+@media (min-width: 1024px) { .container-main { padding-inline: 2rem; } }

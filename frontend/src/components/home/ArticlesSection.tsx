@@ -1,61 +1,152 @@
 "use client";
 
-const articles = [
-  { tag: "تقنية", date: "١٤ يونيو", readTime: "8 دقائق", title: "كيف تبني منصة محتوى احترافية في ٢٠٢٦؟", excerpt: "دليل شامل لبناء منصات المحتوى الرقمية باستخدام أحدث التقنيات...", author: "أ.م", authorName: "م. أحمد علي", bg: "radial-gradient(ellipse at 30% 30%,rgba(200,168,75,.22),transparent 50%),linear-gradient(145deg,#DEEADC,#EFF5ED)" },
-  { tag: "تصميم", date: "١٢ يونيو", readTime: "12 دقيقة", title: "أفضل ممارسات تصميم واجهات المستخدم العربية", excerpt: "نظرة عميقة على تصميم المنتجات الرقمية العربية وتجربة المستخدم...", author: "س.م", authorName: "س. محمد طه", bg: "radial-gradient(ellipse at 70% 25%,rgba(200,168,75,.25),transparent 50%),linear-gradient(145deg,#F0E8D8,#FAF3E6)" },
-  { tag: "أمان", date: "١٠ يونيو", readTime: "6 دقائق", title: "حماية بياناتك في عصر الذكاء الاصطناعي", excerpt: "رؤية شاملة لأمان البيانات والخصوصية في العصر الرقمي الحديث...", author: "د.س", authorName: "د. سامي القاضي", bg: "radial-gradient(ellipse at 40% 60%,rgba(26,67,50,.14),transparent 50%),linear-gradient(145deg,#E5EAE8,#F2F5F3)" },
+import { useEffect, useState } from "react";
+import { fetchPublicContents, PublicItem } from "@/lib/public";
+
+export default function HomeArticlesSection() {
+  const [items, setItems]     = useState<PublicItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchPublicContents({ pageSize: 4 }, ctrl.signal)
+      .then(p => setItems(p.items))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+    return () => ctrl.abort();
+  }, []);
+
+  if (loading) return <SectionSkeleton />;
+  if (items.length === 0) return null;
+
+  return (
+    <section style={{ paddingBlock: "48px 24px" }}>
+      <div className="container-main">
+        <SectionHeader title="أحدث المحتويات" label="اطلاع ومعرفة" href="/articles" linkText="اقرأ الكل" icon="📖" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 18 }}>
+          {items.map((item, idx) => <ArticleCard key={item.id} item={item} index={idx} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const CARD_PALETTES = [
+  { bg: "linear-gradient(135deg,#deeadc,#eff5ed)", accent: "#1A4332" },
+  { bg: "linear-gradient(135deg,#f0e8d8,#faf3e6)", accent: "#7A5000" },
+  { bg: "linear-gradient(135deg,#e5eae8,#f2f5f3)", accent: "#264D3B" },
+  { bg: "linear-gradient(135deg,#e8e5ea,#f5f2f5)", accent: "#3B2664" },
 ];
 
-export default function ArticlesSection() {
-  return (
-    <section className="py-14">
-      <div className="container-main">
-        <div className="flex items-end justify-between gap-4 mb-7">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase mb-2">
-              <span className="w-5 h-0.5 rounded" style={{ background: "var(--gold)" }} />
-              <span style={{ color: "var(--gold)" }}>قراءة ومعرفة</span>
-            </div>
-            <h2 className="font-extrabold" style={{ fontFamily: "'Noto Kufi Arabic',sans-serif", fontSize: "clamp(20px,3.5vw,32px)", color: "var(--ink)" }}>
-              مقالات ومحتوى منتقى
-            </h2>
-          </div>
-          <a href="/articles" className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border whitespace-nowrap"
-            style={{ borderColor: "var(--line-gold)", color: "var(--forest)" }}>المكتبة الكاملة ←</a>
-        </div>
+function ArticleCard({ item, index }: { item: PublicItem; index: number }) {
+  const [hov, setHov] = useState(false);
+  const palette = CARD_PALETTES[index % CARD_PALETTES.length];
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {articles.map((a) => (
-            <article key={a.title} className="rounded-2xl overflow-hidden border flex flex-col transition-all duration-200"
-              style={{ background: "var(--surface)", borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--line-gold)"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-md)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.borderColor = "var(--line)"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"; }}>
-              {/* Thumbnail */}
-              <div className="h-48 relative" style={{ background: a.bg }}>
-                <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,transparent 50%,rgba(0,0,0,.22))" }} />
-                <span className="absolute bottom-3 right-3 text-xs font-black px-3 py-1 rounded-lg"
-                  style={{ background: "rgba(255,255,255,.92)", color: "var(--forest)" }}>{a.tag}</span>
-              </div>
-              {/* Body */}
-              <div className="p-5 flex flex-col gap-2 flex-1">
-                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
-                  <span className="w-4 h-0.5" style={{ background: "var(--gold)" }} />
-                  {a.date} · {a.readTime} قراءة
-                </div>
-                <h3 className="font-bold leading-snug" style={{ fontFamily: "'Noto Kufi Arabic',sans-serif", fontSize: "16px", color: "var(--ink)" }}>
-                  {a.title}
-                </h3>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>{a.excerpt}</p>
-                <div className="mt-auto pt-4 flex items-center justify-between border-t" style={{ borderColor: "var(--line)" }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black"
-                      style={{ background: "linear-gradient(135deg,var(--gold),var(--gold-2))", color: "var(--forest)" }}>{a.author}</div>
-                    <span className="text-xs font-bold" style={{ color: "var(--forest)" }}>{a.authorName}</span>
-                  </div>
-                  <a href="#" className="text-xs font-bold transition-all" style={{ color: "var(--forest)" }}>اقرأ المقال ←</a>
-                </div>
-              </div>
-            </article>
+  return (
+    <a
+      href={`/articles/${item.id}`}
+      style={{
+        display: "flex", flexDirection: "column", borderRadius: 18, overflow: "hidden",
+        background: "var(--surface)", border: `1px solid ${hov ? "var(--line-gold)" : "var(--line)"}`,
+        boxShadow: hov ? "var(--shadow-md)" : "var(--shadow-sm)",
+        transform: hov ? "translateY(-4px)" : "none",
+        transition: "all .22s", textDecoration: "none",
+      }}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+    >
+      {/* Card header color block */}
+      <div style={{ height: 100, background: item.thumbnailUrl ? undefined : palette.bg, position: "relative", overflow: "hidden" }}>
+        {item.thumbnailUrl
+          ? <img src={item.thumbnailUrl} alt={item.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 36, opacity: .4 }}>📄</span>
+            </div>
+          )
+        }
+        {item.categoryName && (
+          <span style={{
+            position: "absolute", bottom: 10, right: 12,
+            fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 8,
+            background: "rgba(255,255,255,.92)", color: palette.accent,
+          }}>{item.categoryName}</span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+        {item.publishedAt && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 16, height: 2, background: "var(--gold)", borderRadius: 99 }} />
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>
+              {new Date(item.publishedAt).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })}
+            </span>
+          </div>
+        )}
+        <h3 style={{
+          margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.5, color: "var(--ink)",
+          fontFamily: "'Noto Kufi Arabic',sans-serif",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>{item.title}</h3>
+        {item.summary && (
+          <p style={{
+            margin: 0, fontSize: 13, color: "var(--muted)", lineHeight: 1.65,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+          }}>{item.summary}</p>
+        )}
+        <div style={{
+          marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--line)",
+          display: "flex", justifyContent: "flex-end",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--forest)" }}>اقرأ المزيد ←</span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function SectionHeader({ label, title, href, linkText, icon }: {
+  label: string; title: string; href: string; linkText: string; icon: string;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 18 }}>{icon}</span>
+          <div style={{ width: 20, height: 2, background: "var(--gold)", borderRadius: 99 }} />
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: "var(--gold)", textTransform: "uppercase" }}>{label}</span>
+        </div>
+        <h2 style={{ margin: 0, fontFamily: "'Noto Kufi Arabic',sans-serif", fontSize: "clamp(18px,3vw,26px)", fontWeight: 800, color: "var(--ink)" }}>
+          {title}
+        </h2>
+      </div>
+      <a href={href} style={{
+        flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "8px 18px", borderRadius: 12,
+        border: "1px solid var(--line-gold)", color: "var(--forest)",
+        fontSize: 13, fontWeight: 700, textDecoration: "none",
+        transition: "all .2s", background: "transparent",
+        fontFamily: "'Noto Kufi Arabic',sans-serif",
+      }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--gold)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+      >
+        {linkText} ←
+      </a>
+    </div>
+  );
+}
+
+function SectionSkeleton() {
+  return (
+    <section style={{ paddingBlock: "48px 24px" }}>
+      <div className="container-main">
+        <div style={{ height: 30, width: 200, borderRadius: 8, background: "var(--surface-3)", marginBottom: 20 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 18 }}>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ borderRadius: 18, background: "var(--surface-3)", height: 220 }} />
           ))}
         </div>
       </div>

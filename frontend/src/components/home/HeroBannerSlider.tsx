@@ -8,8 +8,9 @@ import {
 const CATEGORY_NAME    = "الاعلانات";
 const SUBCATEGORY_NAME = "اسلايدر";
 const PAGE_SIZE        = 20;
+const SLIDE_INTERVAL   = 5000;
+const SLIDER_HEIGHT    = "clamp(300px, 55vw, 620px)";
 
-/** Normalize Arabic: strip diacritics + unify alef variants */
 function norm(s: string) {
   return s.trim()
     .replace(/[ؐ-ًؚ-ٰٟ]/g, "")
@@ -18,7 +19,6 @@ function norm(s: string) {
 
 interface Slide { id: string; title: string; url: string; }
 
-/** Get signed URL of the FIRST image asset in a content item */
 async function getFirstImageUrl(
   item: { id: string; thumbnailUrl: string | null },
   signal: AbortSignal,
@@ -83,67 +83,91 @@ export default function HeroBannerSlider() {
 
   useEffect(() => {
     if (paused || total <= 1) return;
-    timer.current = setInterval(next, 5000);
+    timer.current = setInterval(next, SLIDE_INTERVAL);
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [paused, next, total]);
 
-  /* skeleton while loading */
   if (loading) {
     return (
-      <div className="animate-pulse" style={{
-        borderRadius: 24, height: "clamp(200px, 32vw, 440px)",
-        background: "var(--surface-2)", border: "1px solid var(--line)",
-      }} />
+      <div style={{
+        borderRadius: 20, height: SLIDER_HEIGHT,
+        background: "linear-gradient(135deg,var(--surface-2),var(--surface-3))",
+        border: "1px solid var(--line)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: "50%",
+          border: "3px solid var(--line)",
+          borderTopColor: "var(--gold)",
+          animation: "spin .8s linear infinite",
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     );
   }
 
-  /* no images → render nothing */
   if (slides.length === 0) return null;
 
   return (
     <div
       className="relative overflow-hidden"
-      style={{ borderRadius: 24, boxShadow: "var(--shadow-lg)", border: "1px solid var(--line-gold)" }}
+      style={{
+        borderRadius: 20,
+        boxShadow: "0 32px 80px rgba(11,35,24,.22), 0 0 0 1px var(--line-gold)",
+        height: SLIDER_HEIGHT,
+      }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Track */}
+      {/* Slides track */}
       <div style={{
         display: "flex",
-        transition: "transform .5s cubic-bezier(.4,0,.2,1)",
+        height: "100%",
+        transition: "transform .55s cubic-bezier(.4,0,.2,1)",
         transform: `translateX(${current * 100}%)`,
         direction: "ltr",
       }}>
-        {slides.map(slide => (
-          <div key={slide.id} style={{ minWidth: "100%", flexShrink: 0 }}>
+        {slides.map((slide, i) => (
+          <div key={slide.id} style={{ minWidth: "100%", flexShrink: 0, position: "relative" }}>
             <img
               src={slide.url}
               alt={slide.title}
-              style={{
-                width: "100%",
-                height: "clamp(200px, 32vw, 440px)",
-                objectFit: "cover",
-                display: "block",
-              }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              loading={i === 0 ? "eager" : "lazy"}
             />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(to top, rgba(0,0,0,.45) 0%, transparent 40%)",
+              pointerEvents: "none",
+            }} />
+            {slide.title && (
+              <div style={{
+                position: "absolute", bottom: 52, right: 24, left: 24,
+                color: "#fff", fontFamily: "'Noto Kufi Arabic',sans-serif",
+                fontSize: "clamp(14px,2.2vw,22px)", fontWeight: 700,
+                textShadow: "0 2px 8px rgba(0,0,0,.6)",
+              }}>
+                {slide.title}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Arrows — only when more than 1 slide */}
+      {/* Arrows */}
       {total > 1 && (
         <>
-          <Arrow side="right" label="السابق" onClick={prev}>›</Arrow>
-          <Arrow side="left"  label="التالي"  onClick={next}>‹</Arrow>
+          <SliderArrow side="right" label="السابق" onClick={prev}>&#8250;</SliderArrow>
+          <SliderArrow side="left"  label="التالي"  onClick={next}>&#8249;</SliderArrow>
         </>
       )}
 
       {/* Dots */}
       {total > 1 && (
         <div style={{
-          position: "absolute", bottom: 14, left: "50%",
+          position: "absolute", bottom: 18, left: "50%",
           transform: "translateX(-50%)",
-          display: "flex", gap: 7, zIndex: 10,
+          display: "flex", gap: 6, zIndex: 10,
         }}>
           {slides.map((_, i) => (
             <button
@@ -151,11 +175,11 @@ export default function HeroBannerSlider() {
               onClick={() => setCurrent(i)}
               aria-label={`الشريحة ${i + 1}`}
               style={{
-                width: i === current ? 24 : 8, height: 8,
+                width: i === current ? 28 : 8, height: 8,
                 borderRadius: 99, border: "none", cursor: "pointer", padding: 0,
-                transition: "all .3s",
-                background: i === current ? "var(--gold)" : "rgba(255,255,255,.6)",
-                boxShadow: "0 1px 4px rgba(0,0,0,.3)",
+                transition: "all .35s",
+                background: i === current ? "var(--gold)" : "rgba(255,255,255,.55)",
+                boxShadow: "0 1px 4px rgba(0,0,0,.35)",
               }}
             />
           ))}
@@ -164,10 +188,10 @@ export default function HeroBannerSlider() {
 
       {/* Progress bar */}
       {total > 1 && !paused && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(0,0,0,.18)" }}>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, background: "rgba(0,0,0,.20)", zIndex: 10 }}>
           <div key={current} style={{
             height: "100%", background: "var(--gold)",
-            animation: "sliderProgress 5s linear forwards",
+            animation: `sliderProgress ${SLIDE_INTERVAL}ms linear forwards`,
           }} />
         </div>
       )}
@@ -177,22 +201,24 @@ export default function HeroBannerSlider() {
   );
 }
 
-function Arrow({ side, label, onClick, children }: {
+function SliderArrow({ side, label, onClick, children }: {
   side: "left" | "right"; label: string; onClick: () => void; children: React.ReactNode;
 }) {
   const [hov, setHov] = useState(false);
   return (
     <button
-      onClick={onClick} aria-label={label}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onClick={onClick}
+      aria-label={label}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{
-        position: "absolute", top: "50%", [side]: 14,
+        position: "absolute", top: "50%", [side]: 16,
         transform: "translateY(-50%)", zIndex: 10,
-        width: 40, height: 40, borderRadius: "50%", border: "none",
-        background: hov ? "var(--gold)" : "rgba(255,255,255,.88)",
-        color: hov ? "var(--forest)" : "#1a1a1a",
-        boxShadow: "0 2px 10px rgba(0,0,0,.25)",
-        cursor: "pointer", fontSize: 22,
+        width: 44, height: 44, borderRadius: "50%", border: "none",
+        background: hov ? "var(--gold)" : "rgba(255,255,255,.85)",
+        color: hov ? "var(--forest)" : "#111",
+        boxShadow: "0 4px 16px rgba(0,0,0,.28)",
+        cursor: "pointer", fontSize: 26,
         display: "flex", alignItems: "center", justifyContent: "center",
         transition: "all .2s",
       }}
