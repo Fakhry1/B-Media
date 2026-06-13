@@ -9,8 +9,13 @@ const CATEGORY_NAME    = "الاعلانات";
 const SUBCATEGORY_NAME = "اسلايدر";
 const PAGE_SIZE = 20;
 
-// All string values the backend may return for an image asset's mediaType
-const IMAGE_TYPES = ["image", "2", "Image", "photo", "Photo", "picture", "Picture"];
+/** Normalize Arabic text: strip diacritics + unify alef variants */
+function norm(s: string) {
+  return s
+    .trim()
+    .replace(/[ؐ-ًؚ-ٰٟ]/g, "") // diacritics
+    .replace(/[أإآٱ]/g, "ا");                            // alef variants
+}
 
 interface Slide {
   id: string;
@@ -32,18 +37,45 @@ async function resolveSlideUrl(
     const detail = await fetchPublicDetail(item.id, signal);
     if (!detail.mediaAssets.length) return null;
 
-    // prefer an image asset
     const imageAsset = detail.mediaAssets.find(a =>
-      IMAGE_TYPES.some(t => a.mediaType.toLowerCase() === t.toLowerCase())
+      ["Image", "image", "2", "Photo", "photo"].includes(a.mediaType)
     );
-    // fall back to first asset if no image asset found
     const asset = imageAsset ?? detail.mediaAssets[0];
 
     const { url } = await fetchSignedUrl(asset.id, signal);
     return url;
-  } catch {
+  } catch (e) {
+    console.warn("[Slider] resolveSlideUrl failed:", e);
     return null;
   }
+}
+
+/* ── Single slide image with error fallback ── */
+function SlideImage({ slide }: { slide: Slide }) {
+  const [err, setErr] = useState(false);
+  if (err) {
+    return (
+      <div style={{
+        minWidth: "100%",
+        height: "clamp(200px, 32vw, 440px)",
+        background: "linear-gradient(135deg,#0b2318,#1a4332)",
+        display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10,
+      }}>
+        <span style={{ fontSize: 40 }}>🖼️</span>
+        <p style={{ color: "rgba(255,255,255,.6)", fontSize: 13 }}>{slide.title}</p>
+      </div>
+    );
+  }
+  return (
+    <div style={{ minWidth: "100%" }}>
+      <img
+        src={slide.url}
+        alt={slide.title}
+        onError={() => { console.warn("[Slider] img load error:", slide.url); setErr(true); }}
+        style={{ width: "100%", height: "clamp(200px, 32vw, 440px)", objectFit: "cover", display: "block" }}
+      />
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -61,12 +93,17 @@ export default function HeroBannerSlider() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        // 1. find category + subcategory (case-insensitive trim)
+        // 1. find category + subcategory (normalized Arabic matching)
         const cats = await fetchPublicCategories(ctrl.signal);
-        const cat  = cats.find(c => c.name.trim() === CATEGORY_NAME.trim());
+        console.log("[Slider] categories:", cats.map(c => c.name));
+
+        const cat = cats.find(c => norm(c.name) === norm(CATEGORY_NAME));
+        console.log("[Slider] matched category:", cat?.name ?? "NOT FOUND");
         if (!cat) { setLoading(false); return; }
 
-        const sub = cat.subcategories.find(s => s.name.trim() === SUBCATEGORY_NAME.trim());
+        const sub = cat.subcategories.find(s => norm(s.name) === norm(SUBCATEGORY_NAME));
+        console.log("[Slider] matched subcategory:", sub?.name ?? "NOT FOUND",
+          "| available:", cat.subcategories.map(s => s.name));
         if (!sub) { setLoading(false); return; }
 
         // 2. fetch ALL published items in that subcategory (no mediaType filter)
@@ -74,11 +111,13 @@ export default function HeroBannerSlider() {
           { categoryId: cat.id, subcategoryId: sub.id, pageSize: PAGE_SIZE },
           ctrl.signal
         );
+        console.log("[Slider] items found:", page.items.length, page.items.map(i => i.title));
 
         // 3. resolve a display URL for every item in parallel
         const resolved = await Promise.all(
           page.items.map(async item => {
             const url = await resolveSlideUrl(item, ctrl.signal);
+            console.log("[Slider] item", item.title, "→ url:", url ? "✓" : "null");
             if (!url) return null;
             return { id: item.id, title: item.title, url };
           })
@@ -86,6 +125,7 @@ export default function HeroBannerSlider() {
 
         setSlides(resolved.filter(Boolean) as Slide[]);
       } catch (e: unknown) {
+        console.error("[Slider] error:", e);
         if ((e as Error).name !== "AbortError") setSlides([]);
       } finally {
         setLoading(false);
@@ -136,18 +176,7 @@ export default function HeroBannerSlider() {
         direction: "ltr",
       }}>
         {slides.map(slide => (
-          <div key={slide.id} style={{ minWidth: "100%" }}>
-            <img
-              src={slide.url}
-              alt={slide.title}
-              style={{
-                width: "100%",
-                height: "clamp(200px, 32vw, 440px)",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          </div>
+          <SlideImage key={slide.id} slide={slide} />
         ))}
       </div>
 
