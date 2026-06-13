@@ -84,3 +84,25 @@ export function fetchPublicDetail(id: string, signal?: AbortSignal): Promise<Pub
 export function fetchSignedUrl(assetId: string, signal?: AbortSignal): Promise<{ url: string }> {
   return pfetch<{ url: string }>(`/api/v1/mediaassets/${assetId}/url`, signal);
 }
+
+export async function downloadBlob(url: string, filename: string): Promise<void> {
+  const a = document.createElement("a");
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } catch {
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}

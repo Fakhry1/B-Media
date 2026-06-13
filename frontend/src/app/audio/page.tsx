@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   fetchPublicContents, fetchPublicCategories, fetchPublicDetail, fetchSignedUrl,
-  type PublicItem, type PubCategory,
+  downloadBlob, type PublicItem, type PubCategory,
 } from "@/lib/public";
 
 const PAGE_SIZE = 15;
@@ -75,6 +75,7 @@ export default function AudioPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [loadingTrack, setLoadingTrack] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [downloadingAudio, setDownloadingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Find fixed category
@@ -296,6 +297,20 @@ export default function AudioPage() {
                 background: "var(--surface-2)", cursor: "pointer", fontSize: 15, color: "var(--ink)" }}>⏭</button>
               <button onClick={handleClose} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--line)",
                 background: "var(--surface-2)", cursor: "pointer", fontSize: 16, color: "var(--muted)" }}>×</button>
+              {audioSrc && (
+                <button disabled={downloadingAudio}
+                  onClick={async () => {
+                    if (!audioSrc || !playing) return;
+                    setDownloadingAudio(true);
+                    try { await downloadBlob(audioSrc, playing.title + ".mp3"); } finally { setDownloadingAudio(false); }
+                  }}
+                  style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid var(--line)",
+                    background: downloadingAudio ? "var(--line)" : "var(--surface-2)",
+                    cursor: downloadingAudio ? "default" : "pointer", fontSize: 12,
+                    color: "var(--ink)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {downloadingAudio ? "..." : "⬇ تحميل"}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   fetchPublicContents, fetchPublicCategories, fetchPublicDetail, fetchSignedUrl,
-  type PublicItem, type PubCategory,
+  downloadBlob, type PublicItem, type PubCategory,
 } from "@/lib/public";
 
 const PAGE_SIZE = 16;
@@ -96,6 +96,7 @@ function ImageLightbox({ item, onClose }: { item: PublicItem; onClose: () => voi
   const [loading, setLoading] = useState(true);
   const [url, setUrl] = useState<string | null>(null);
   const [err, setErr] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -156,12 +157,17 @@ function ImageLightbox({ item, onClose }: { item: PublicItem; onClose: () => voi
           {url && !loading && (
             <div style={{ textAlign: "center" }}>
               <img src={url} alt={item.title} style={{ maxWidth: "100%", borderRadius: 12, display: "block", margin: "0 auto" }} />
-              <a href={url} download target="_blank" rel="noreferrer"
+              <button disabled={downloading}
+                onClick={async () => {
+                  setDownloading(true);
+                  try { await downloadBlob(url, item.title + ".jpg"); } finally { setDownloading(false); }
+                }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 14,
-                  padding: "8px 20px", borderRadius: 10, background: "var(--forest)", color: "#fff",
-                  fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-                ⬇ تحميل الصورة
-              </a>
+                  padding: "8px 20px", borderRadius: 10, border: "none",
+                  background: downloading ? "var(--line)" : "var(--forest)", color: downloading ? "var(--muted)" : "#fff",
+                  fontSize: 13, fontWeight: 600, cursor: downloading ? "default" : "pointer" }}>
+                {downloading ? "جارٍ التحميل..." : "⬇ تحميل الصورة"}
+              </button>
             </div>
           )}
         </div>

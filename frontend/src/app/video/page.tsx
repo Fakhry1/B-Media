@@ -5,7 +5,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   fetchPublicContents, fetchPublicCategories, fetchPublicDetail, fetchSignedUrl,
-  type PublicItem, type PubCategory,
+  downloadBlob, type PublicItem, type PubCategory,
 } from "@/lib/public";
 
 const PAGE_SIZE = 10;
@@ -85,6 +85,7 @@ function VideoModal({ item, onClose }: { item: PublicItem; onClose: () => void }
   const [loading, setLoading] = useState(true);
   const [url, setUrl] = useState<string | null>(null);
   const [err, setErr] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -132,9 +133,23 @@ function VideoModal({ item, onClose }: { item: PublicItem; onClose: () => void }
           )}
           {err && !loading && <p style={{ textAlign: "center", color: "var(--muted)", padding: "40px 0" }}>تعذّر تحميل الفيديو</p>}
           {url && !loading && (
-            <video controls autoPlay style={{ width: "100%", borderRadius: 12, background: "#000" }} src={url}>
-              متصفحك لا يدعم الفيديو.
-            </video>
+            <>
+              <video controls autoPlay style={{ width: "100%", borderRadius: 12, background: "#000" }} src={url}>
+                متصفحك لا يدعم الفيديو.
+              </video>
+              <div style={{ textAlign: "center", marginTop: 14 }}>
+                <button disabled={downloading}
+                  onClick={async () => {
+                    setDownloading(true);
+                    try { await downloadBlob(url, item.title + ".mp4"); } finally { setDownloading(false); }
+                  }}
+                  style={{ padding: "8px 22px", borderRadius: 10, border: "none",
+                    background: downloading ? "var(--line)" : "var(--forest)", color: "#fff",
+                    fontSize: 13, fontWeight: 600, cursor: downloading ? "default" : "pointer" }}>
+                  {downloading ? "جارٍ التحميل..." : "⬇ تحميل الفيديو"}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

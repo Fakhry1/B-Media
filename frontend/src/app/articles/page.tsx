@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
-  fetchPublicContents, fetchPublicCategories,
-  type PublicItem, type PubCategory,
+  fetchPublicContents, fetchPublicCategories, fetchPublicDetail, fetchSignedUrl,
+  downloadBlob, type PublicItem, type PubCategory,
 } from "@/lib/public";
 
 const PAGE_SIZE = 12;
@@ -31,7 +31,10 @@ function SkeletonCard({ large }: { large?: boolean }) {
   );
 }
 
-function ArticleCard({ item, large, onClick }: { item: PublicItem; large?: boolean; onClick: () => void }) {
+function ArticleCard({ item, large, onClick, onDownload, isDownloading }: {
+  item: PublicItem; large?: boolean; onClick: () => void;
+  onDownload: (e: React.MouseEvent) => void; isDownloading: boolean;
+}) {
   const [hover, setHover] = useState(false);
   const palette = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EC4899", "#06B6D4"];
   const color = palette[item.title.charCodeAt(0) % palette.length];
@@ -64,6 +67,13 @@ function ArticleCard({ item, large, onClick }: { item: PublicItem; large?: boole
               background: "rgba(200,168,75,.15)", color: "var(--forest)", fontWeight: 700 }}>مميز</span>
           )}
           <span style={{ marginInlineStart: "auto", fontSize: 12, color, fontWeight: 600 }}>📋 PDF</span>
+          <button disabled={isDownloading} onClick={onDownload}
+            style={{ padding: "4px 12px", borderRadius: 8, border: `1px solid ${color}44`,
+              background: isDownloading ? "var(--line)" : `${color}12`,
+              color: isDownloading ? "var(--muted)" : color,
+              fontSize: 12, fontWeight: 600, cursor: isDownloading ? "default" : "pointer" }}>
+            {isDownloading ? "..." : "⬇ تحميل"}
+          </button>
         </div>
       </div>
     </div>
@@ -109,6 +119,7 @@ export default function ArticlesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -139,6 +150,21 @@ export default function ArticlesPage() {
 
   const handleSub = useCallback((id: string | null) => { setSubId(id); setPage(1); }, []);
   const handleLang = useCallback((l: string | null) => { setLang(l); setPage(1); }, []);
+
+  async function handleDownload(item: PublicItem, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (downloadingId) return;
+    setDownloadingId(item.id);
+    try {
+      const detail = await fetchPublicDetail(item.id);
+      const asset = detail.mediaAssets.find(a =>
+        a.mediaType.toLowerCase().includes("pdf") || a.mediaType === "5"
+      );
+      if (!asset) return;
+      const { url } = await fetchSignedUrl(asset.id);
+      await downloadBlob(url, item.title + ".pdf");
+    } catch { /* ignore */ } finally { setDownloadingId(null); }
+  }
 
   const featured = items[0] ?? null;
   const rest = items.slice(1);
@@ -203,13 +229,19 @@ export default function ArticlesPage() {
             <>
               {featured && (
                 <div style={{ marginBottom: 28 }}>
-                  <ArticleCard item={featured} large onClick={() => { window.location.href = `/articles/${featured.id}`; }} />
+                  <ArticleCard item={featured} large
+                    onClick={() => { window.location.href = `/articles/${featured.id}`; }}
+                    onDownload={e => handleDownload(featured, e)}
+                    isDownloading={downloadingId === featured.id} />
                 </div>
               )}
               {rest.length > 0 && (
                 <div className="agrid">
                   {rest.map(item => (
-                    <ArticleCard key={item.id} item={item} onClick={() => { window.location.href = `/articles/${item.id}`; }} />
+                    <ArticleCard key={item.id} item={item}
+                      onClick={() => { window.location.href = `/articles/${item.id}`; }}
+                      onDownload={e => handleDownload(item, e)}
+                      isDownloading={downloadingId === item.id} />
                   ))}
                 </div>
               )}
