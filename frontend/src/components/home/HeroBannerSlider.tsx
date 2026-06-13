@@ -5,10 +5,12 @@ import {
   fetchPublicCategories, fetchPublicContents, fetchPublicDetail, fetchSignedUrl,
 } from "@/lib/public";
 
-const CATEGORY_NAME   = "الاعلانات";
+const CATEGORY_NAME    = "الاعلانات";
 const SUBCATEGORY_NAME = "اسلايدر";
 const PAGE_SIZE = 20;
-const MEDIA_TYPE = 2; // Image
+
+// All string values the backend may return for an image asset's mediaType
+const IMAGE_TYPES = ["image", "2", "Image", "photo", "Photo", "picture", "Picture"];
 
 interface Slide {
   id: string;
@@ -16,14 +18,42 @@ interface Slide {
   url: string;
 }
 
+/** Try to resolve a display URL for one content item. Priority:
+ *  1. thumbnailUrl (already public)
+ *  2. Image asset signed URL
+ *  3. First available asset signed URL (last resort) */
+async function resolveSlideUrl(
+  item: { id: string; thumbnailUrl: string | null },
+  signal: AbortSignal
+): Promise<string | null> {
+  if (item.thumbnailUrl) return item.thumbnailUrl;
+
+  try {
+    const detail = await fetchPublicDetail(item.id, signal);
+    if (!detail.mediaAssets.length) return null;
+
+    // prefer an image asset
+    const imageAsset = detail.mediaAssets.find(a =>
+      IMAGE_TYPES.some(t => a.mediaType.toLowerCase() === t.toLowerCase())
+    );
+    // fall back to first asset if no image asset found
+    const asset = imageAsset ?? detail.mediaAssets[0];
+
+    const { url } = await fetchSignedUrl(asset.id, signal);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Slider UI                                                            */
 /* ------------------------------------------------------------------ */
 export default function HeroBannerSlider() {
-  const [slides, setSlides]     = useState<Slide[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [current, setCurrent]   = useState(0);
-  const [paused, setPaused]     = useState(false);
+  const [slides, setSlides]   = useState<Slide[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused]   = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── fetch slides from API ── */
@@ -31,42 +61,30 @@ export default function HeroBannerSlider() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        // 1. find category + subcategory
-        const cats   = await fetchPublicCategories(ctrl.signal);
-        const cat    = cats.find(c => c.name === CATEGORY_NAME);
+        // 1. find category + subcategory (case-insensitive trim)
+        const cats = await fetchPublicCategories(ctrl.signal);
+        const cat  = cats.find(c => c.name.trim() === CATEGORY_NAME.trim());
         if (!cat) { setLoading(false); return; }
 
-        const sub = cat.subcategories.find(s => s.name === SUBCATEGORY_NAME);
+        const sub = cat.subcategories.find(s => s.name.trim() === SUBCATEGORY_NAME.trim());
         if (!sub) { setLoading(false); return; }
 
-        // 2. fetch published image items in that subcategory
+        // 2. fetch ALL published items in that subcategory (no mediaType filter)
         const page = await fetchPublicContents(
-          { categoryId: cat.id, subcategoryId: sub.id, mediaType: MEDIA_TYPE, pageSize: PAGE_SIZE },
+          { categoryId: cat.id, subcategoryId: sub.id, pageSize: PAGE_SIZE },
           ctrl.signal
         );
 
-        // 3. resolve a display URL for each item (thumbnail → signed URL)
+        // 3. resolve a display URL for every item in parallel
         const resolved = await Promise.all(
           page.items.map(async item => {
-            if (item.thumbnailUrl) {
-              return { id: item.id, title: item.title, url: item.thumbnailUrl };
-            }
-            // no thumbnail → get signed URL for first image asset
-            try {
-              const detail = await fetchPublicDetail(item.id, ctrl.signal);
-              const asset  = detail.mediaAssets.find(a =>
-                a.mediaType.toLowerCase().includes("image") ||
-                a.mediaType === "2" || a.mediaType === "Image"
-              );
-              if (!asset) return null;
-              const { url } = await fetchSignedUrl(asset.id, ctrl.signal);
-              return { id: item.id, title: item.title, url };
-            } catch { return null; }
+            const url = await resolveSlideUrl(item, ctrl.signal);
+            if (!url) return null;
+            return { id: item.id, title: item.title, url };
           })
         );
 
-        const valid = resolved.filter(Boolean) as Slide[];
-        setSlides(valid);
+        setSlides(resolved.filter(Boolean) as Slide[]);
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") setSlides([]);
       } finally {
