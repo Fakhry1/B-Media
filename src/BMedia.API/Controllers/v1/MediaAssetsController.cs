@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using BMedia.Application.Features.MediaAssets.Commands.DeleteMediaAsset;
 using BMedia.Application.Features.MediaAssets.Commands.UploadAsset;
 using BMedia.Application.Features.MediaAssets.Queries.GetAssets;
 using BMedia.Domain.Enums;
@@ -53,4 +54,12 @@ public class MediaAssetsController : BaseApiController
 
         return ToActionResult(await Sender.Send(command, cancellationToken));
     }
+
+    /// <summary>Delete (soft-delete) a media asset.</summary>
+    [HttpDelete("{id:guid}")]
+    [EnableRateLimiting("api")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+        => ToActionResult(await Sender.Send(new DeleteMediaAssetCommand(id), cancellationToken));
 }
