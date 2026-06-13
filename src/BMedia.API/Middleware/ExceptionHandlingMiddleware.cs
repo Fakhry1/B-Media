@@ -49,8 +49,9 @@ public class ExceptionHandlingMiddleware
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             context.Response.ContentType = "application/json";
 
+            var innerDetail = ex.InnerException?.Message;
             object body = _env.IsDevelopment()
-                ? new { title = "An error occurred", status = 500, detail = ex.Message, exceptionType = ex.GetType().Name, stackTrace = ex.StackTrace }
+                ? new { title = "An error occurred", status = 500, detail = ex.Message, innerDetail, exceptionType = ex.GetType().Name, stackTrace = ex.StackTrace }
                 : new { title = "An error occurred", status = 500, detail = "An unexpected error occurred. Please try again later." };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(body));

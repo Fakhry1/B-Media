@@ -1,3 +1,4 @@
+using BMedia.Domain.Common;
 using BMedia.Domain.Entities;
 using BMedia.Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
@@ -71,5 +72,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Localization>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Attachment>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<ScheduledPublication>().HasQueryFilter(e => !e.IsDeleted);
+
+        // Apply IsRowVersion() globally to all BaseEntity-derived types
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property<uint>("RowVersion")
+                    .IsRowVersion();
+            }
+        }
     }
 }
