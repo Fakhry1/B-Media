@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BMedia.API.Authorization;
 using BMedia.Domain.Interfaces;
@@ -20,7 +21,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDateTimeService, DateTimeService>();
 
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(opt =>
+                opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         services.AddEndpointsApiExplorer();
 
         AddJwtAuthentication(services, configuration);
