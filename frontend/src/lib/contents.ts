@@ -164,10 +164,11 @@ export function uploadAsset(data: {
   form.append("sortOrder", String(data.sortOrder ?? 0));
 
   const token = typeof window !== "undefined" ? localStorage.getItem("bmedia_token") : null;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:44344";
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/v1/mediaassets/upload");
+    xhr.open("POST", `${baseUrl}/api/v1/mediaassets/upload`);
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     xhr.upload.addEventListener("progress", e => {
@@ -202,7 +203,7 @@ export function getSignedUrl(assetId: string): Promise<{ url: string; expiresAt:
 
 export function deleteAsset(assetId: string): Promise<boolean> {
   const token = typeof window !== "undefined" ? localStorage.getItem("bmedia_token") : null;
-  return fetch(`/api/v1/mediaassets/${assetId}`, {
+  return fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:44344"}/api/v1/mediaassets/${assetId}`, {
     method: "DELETE",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   }).then(async r => {

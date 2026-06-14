@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:44344";
 
 async function pfetch<T>(path: string, signal?: AbortSignal): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { signal, cache: "no-store" });
@@ -106,3 +106,4 @@ export async function downloadBlob(url: string, filename: string): Promise<void>
     document.body.removeChild(a);
   }
 }
+//123

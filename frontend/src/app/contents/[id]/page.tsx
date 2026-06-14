@@ -20,10 +20,9 @@ const LANGS = [
 
 // Media types the user can pick for upload
 const UPLOAD_MEDIA_TYPES = [
-  { id: 1, key: "video",  icon: "🎬", labelAr: "فيديو",   labelEn: "Video",  accept: "video/*" },
-  { id: 2, key: "image",  icon: "🖼️", labelAr: "صورة",    labelEn: "Image",  accept: "image/*" },
-  { id: 3, key: "audio",  icon: "🎙", labelAr: "صوت",     labelEn: "Audio",  accept: "audio/*" },
-  { id: 5, key: "pdf",    icon: "📋", labelAr: "ملف PDF", labelEn: "PDF",    accept: ".pdf" },
+  { id: 1, key: "video",  icon: "🎬", labelAr: "فيديو",      labelEn: "Video",  accept: "video/*" },
+  { id: 3, key: "audio",  icon: "🎙", labelAr: "صوت",        labelEn: "Audio",  accept: "audio/*" },
+  { id: 5, key: "pdf",    icon: "📋", labelAr: "ملف PDF",    labelEn: "PDF",    accept: ".pdf" },
 ] as const;
 
 function StatusBadge({ status, lang }: { status: string; lang: "ar" | "en" }) {
@@ -69,55 +68,13 @@ function ErrMsg({ msg }: { msg: string }) {
     style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.20)", color: "#DC2626" }}>{msg}</p> : null;
 }
 
-/* ── Image lightbox ── */
-function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(0,0,0,.90)", backdropFilter: "blur(10px)",
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-      }}
-    >
-      <button
-        onClick={onClose}
-        style={{
-          position: "absolute", top: 16, right: 16,
-          width: 40, height: 40, borderRadius: "50%",
-          background: "rgba(255,255,255,.15)", border: "none",
-          color: "#fff", fontSize: 22, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}
-      >×</button>
-      <img
-        src={src}
-        alt={alt}
-        onClick={e => e.stopPropagation()}
-        style={{ maxWidth: "100%", maxHeight: "90vh", borderRadius: 12, boxShadow: "0 8px 40px rgba(0,0,0,.6)" }}
-      />
-    </div>
-  );
-}
-
 // Smart media preview — fetches a SAS (signed) URL then renders the appropriate player
 function MediaPreview({ asset }: { asset: MediaAssetDto }) {
   const [src, setSrc] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchErr, setFetchErr] = useState("");
-  const [lightbox, setLightbox] = useState(false);
 
-  const canPreview =
-    asset.mediaType === "Video" ||
-    asset.mediaType === "Audio" ||
-    asset.mediaType === "PDF" ||
-    asset.mediaType === "Image";
+  const canPreview = asset.mediaType === "Video" || asset.mediaType === "Audio" || asset.mediaType === "PDF";
   if (!canPreview) return null;
 
   function handleLoad() {
@@ -144,33 +101,9 @@ function MediaPreview({ asset }: { asset: MediaAssetDto }) {
             ? "⏳ جارٍ التحميل..."
             : asset.mediaType === "Video" ? "▶ تشغيل الفيديو"
             : asset.mediaType === "Audio" ? "🎙 تشغيل الصوت"
-            : asset.mediaType === "Image" ? "🖼️ عرض الصورة"
             : "📋 عرض PDF"}
         </button>
       </div>
-    );
-  }
-
-  if (asset.mediaType === "Image") {
-    return (
-      <>
-        <div
-          className="mt-3 rounded-xl overflow-hidden border cursor-zoom-in"
-          style={{ borderColor: "var(--line)", textAlign: "center", background: "var(--surface-2)" }}
-          onClick={() => setLightbox(true)}
-          title="انقر للعرض بالحجم الكامل"
-        >
-          <img
-            src={src}
-            alt={asset.originalFileName}
-            style={{ maxWidth: "100%", maxHeight: 260, objectFit: "contain", display: "block", margin: "0 auto" }}
-          />
-          <p style={{ fontSize: 11, color: "var(--muted)", padding: "6px 0 8px" }}>انقر للتكبير</p>
-        </div>
-        {lightbox && (
-          <ImageLightbox src={src} alt={asset.originalFileName} onClose={() => setLightbox(false)} />
-        )}
-      </>
     );
   }
 
@@ -281,7 +214,7 @@ function AssetCard({ asset, canDelete, deleting, onDelete }: {
         </div>
       </div>
       {/* Inline media preview */}
-      {(asset.mediaType === "Video" || asset.mediaType === "Audio" || asset.mediaType === "PDF" || asset.mediaType === "Image") && (
+      {(asset.mediaType === "Video" || asset.mediaType === "Audio" || asset.mediaType === "PDF") && (
         <div className="px-3 pb-3">
           {asset.status === "Processing" && (
             <p className="text-xs mb-1" style={{ color: "#F59E0B" }}>⏳ جارٍ المعالجة، قد لا يكون الملف جاهزاً بعد.</p>
@@ -600,7 +533,7 @@ export default function ContentDetailPage({ params }: { params: Promise<{ id: st
                   <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>
                     {lang === "ar" ? "١. اختر نوع الوسيط:" : "1. Select media type:"}
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {UPLOAD_MEDIA_TYPES.map(t => {
                       const active = uploadMediaTypeId === t.id;
                       return (
