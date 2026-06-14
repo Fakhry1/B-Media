@@ -259,30 +259,39 @@ CREATE TABLE workflow_transitions (
 );
 
 CREATE TABLE contents (
-    id                    uuid           NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    title                 varchar(500)   NOT NULL,
-    slug                  varchar(600)   NOT NULL,
-    summary               varchar(2000),
-    language              varchar(10)    NOT NULL DEFAULT 'ar',
-    status                integer        NOT NULL DEFAULT 0,
-    is_featured           boolean        NOT NULL DEFAULT false,
-    allow_comments        boolean        NOT NULL DEFAULT true,
-    view_count            bigint         NOT NULL DEFAULT 0,
-    published_at          timestamptz,
-    scheduled_publish_at  timestamptz,
-    current_workflow_step varchar(200),
-    category_id           uuid,
-    subcategory_id        uuid,
-    created_at            timestamptz    NOT NULL DEFAULT now(),
-    created_by            uuid,
-    updated_at            timestamptz,
-    updated_by            uuid,
-    is_deleted            boolean        NOT NULL DEFAULT false,
-    deleted_at            timestamptz,
-    deleted_by            uuid,
-    row_version           xid            NOT NULL DEFAULT '0'::xid,
-    FOREIGN KEY (category_id)    REFERENCES categories(id)    ON DELETE SET NULL,
-    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL
+    id                        uuid           NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    title                     varchar(500)   NOT NULL,
+    slug                      varchar(600)   NOT NULL,
+    summary                   varchar(2000),
+    body                      text,
+    language                  varchar(10)    NOT NULL DEFAULT 'ar',
+    status                    integer        NOT NULL DEFAULT 1,
+    is_featured               boolean        NOT NULL DEFAULT false,
+    allow_comments            boolean        NOT NULL DEFAULT true,
+    view_count                integer        NOT NULL DEFAULT 0,
+    seo_title                 varchar(300),
+    seo_description           varchar(500),
+    seo_keywords              varchar(500),
+    canonical_url             varchar(2048),
+    published_at              timestamptz,
+    published_by              uuid,
+    scheduled_publish_at      timestamptz,
+    archived_at               timestamptz,
+    current_workflow_step_id  uuid,
+    assigned_reviewer_id      uuid,
+    category_id               uuid,
+    subcategory_id            uuid,
+    created_at                timestamptz    NOT NULL DEFAULT now(),
+    created_by                uuid,
+    updated_at                timestamptz,
+    updated_by                uuid,
+    is_deleted                boolean        NOT NULL DEFAULT false,
+    deleted_at                timestamptz,
+    deleted_by                uuid,
+    row_version               xid            NOT NULL DEFAULT '0'::xid,
+    FOREIGN KEY (category_id)               REFERENCES categories(id)     ON DELETE SET NULL,
+    FOREIGN KEY (subcategory_id)            REFERENCES subcategories(id)  ON DELETE SET NULL,
+    FOREIGN KEY (current_workflow_step_id)  REFERENCES workflow_steps(id) ON DELETE SET NULL
 );
 
 CREATE TABLE media_assets (
@@ -334,11 +343,13 @@ CREATE TABLE media_versions (
 );
 
 CREATE TABLE content_tags (
-    content_id uuid NOT NULL,
-    tag_id     uuid NOT NULL,
+    content_id       uuid        NOT NULL,
+    tag_id           uuid        NOT NULL,
+    tagged_at        timestamptz NOT NULL DEFAULT now(),
+    is_ai_generated  boolean     NOT NULL DEFAULT false,
     PRIMARY KEY (content_id, tag_id),
-    FOREIGN KEY (content_id) REFERENCES contents(id)  ON DELETE CASCADE,
-    FOREIGN KEY (tag_id)     REFERENCES tags(id)      ON DELETE CASCADE
+    FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id)     REFERENCES tags(id)     ON DELETE CASCADE
 );
 
 CREATE TABLE localizations (
