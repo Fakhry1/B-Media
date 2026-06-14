@@ -108,60 +108,78 @@ function SubcategoryTabs({
 }
 
 /* ─── Main hook ──────────────────────────────────────────── */
-export function useCategoryData(categoryName: string, page: number, subId: string | null, pageSize: number) {
-  const [category, setCategory] = useState<PubCategory | null>(null);
+export function useCategoryData(
+  categoryName: string,
+  page: number,
+  subId: string | null,
+  pageSize: number,
+  mediaType?: number,
+) {
+  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined); // undefined = loading
   const [items, setItems] = useState<PublicItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // Find category once
+  // Find category once (non-blocking)
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => {
-        setCategory(cats.find(c => c.name === categoryName) ?? null);
-      })
-      .catch(e => { if (e.name !== "AbortError") setError(true); });
+      .then(cats => setCategory(cats.find(c => c.name === categoryName) ?? null))
+      .catch(e => { if (e.name !== "AbortError") setCategory(null); });
     return () => ctrl.abort();
   }, [categoryName]);
 
-  // Fetch content whenever filters change
+  // Fetch content — runs as soon as category lookup is done (even if null)
   useEffect(() => {
-    if (!category) return;
+    if (category === undefined) return; // still loading categories
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
     fetchPublicContents(
-      { page, pageSize, categoryId: category.id, subcategoryId: subId ?? undefined },
+      {
+        page,
+        pageSize,
+        // only pass categoryId when category is found
+        categoryId: category?.id,
+        subcategoryId: subId ?? undefined,
+        // always filter by media type so content shows even without a matching category
+        mediaType,
+      },
       ctrl.signal,
     )
       .then(d => { setItems(d.items); setTotalPages(d.totalPages); })
       .catch(e => { if (e.name !== "AbortError") setError(true); })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
-  }, [category, page, subId, pageSize]);
+  }, [category, page, subId, pageSize, mediaType]);
 
   return { category, items, totalPages, loading, error };
 }
 
 /* ─── CategoryScreen component ───────────────────────────── */
 export interface CategoryScreenProps {
-  /** Must match the category name stored in DB */
+  /** Category name in DB — used to match and filter by categoryId */
   categoryName: string;
+  /**
+   * MediaType numeric value from the backend enum:
+   * 1=Video, 2=Image, 3=Audio, 4=Document, 5=PDF
+   * Always applied so content appears even if the category isn't in the DB yet.
+   */
+  mediaType: number;
   icon: string;
   title: string;
   subtitle: string;
   emptyMessage: string;
   pageSize?: number;
-  gridCols?: string; // CSS grid-template-columns for desktop
+  gridCols?: string;
   skeletonRatio?: string;
   renderCard: (item: PublicItem, onClick: () => void) => ReactNode;
   renderModal?: (item: PublicItem | null, onClose: () => void) => ReactNode;
 }
 
 export default function CategoryScreen({
-  categoryName, icon, title, subtitle, emptyMessage,
+  categoryName, mediaType, icon, title, subtitle, emptyMessage,
   pageSize = 12, gridCols = "repeat(3,1fr)",
   skeletonRatio = "56.25%",
   renderCard, renderModal,
@@ -171,7 +189,7 @@ export default function CategoryScreen({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const { category, items, totalPages, loading, error } = useCategoryData(
-    categoryName, page, subId, pageSize,
+    categoryName, page, subId, pageSize, mediaType,
   );
 
   const handleSub = useCallback((id: string | null) => {

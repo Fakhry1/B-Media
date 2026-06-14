@@ -127,6 +127,7 @@ export default function GalleryPage() {
   return (
     <CategoryScreen
       categoryName="صور"
+      mediaType={2}
       icon="🖼️"
       title="صور"
       subtitle="استعرض معرض الصور"

@@ -132,6 +132,7 @@ export default function AudioPage() {
   return (
     <CategoryScreen
       categoryName="السماع"
+      mediaType={3}
       icon="🎧"
       title="السماع"
       subtitle="استمع إلى المحتوى الصوتي"

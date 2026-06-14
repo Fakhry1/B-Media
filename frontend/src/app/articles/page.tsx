@@ -140,6 +140,7 @@ export default function ArticlesPage() {
   return (
     <CategoryScreen
       categoryName="الاطلاع"
+      mediaType={5}
       icon="📖"
       title="الاطلاع"
       subtitle="تصفّح المقالات والمستندات"
