@@ -5,8 +5,8 @@ export type Lang = "ar" | "en";
 export const translations = {
   ar: {
     // nav
-    home: "الرئيسية", video: "فيديو", gallery: "صور", audio: "صوت",
-    articles: "قراءة", categories: "التصنيفات", contents: "المحتوى",
+    home: "الرئيسية", video: "المشاهدة", gallery: "صور", audio: "السماع",
+    articles: "الاطلاع", categories: "التصنيفات", contents: "المحتوى",
     login: "تسجيل الدخول", logout: "تسجيل الخروج",
     search: "ابحث في المحتوى...",
     // categories page
