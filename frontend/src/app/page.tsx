@@ -26,6 +26,84 @@ function fmtDate(iso: string | null) {
     : "";
 }
 
+/* ─── News Ticker ────────────────────────────────────────── */
+function NewsTicker() {
+  const [titles, setTitles] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetchPublicContents({ pageSize: 6, mediaType: 1 }),
+      fetchPublicContents({ pageSize: 6, mediaType: 3 }),
+      fetchPublicContents({ pageSize: 6, mediaType: 5 }),
+    ]).then(results => {
+      const all = results.flatMap(r => r.items.map(i => i.title)).filter(Boolean);
+      setTitles(all);
+    }).catch(() => {});
+  }, []);
+
+  if (titles.length === 0) return null;
+
+  const repeated = [...titles, ...titles, ...titles];
+  const duration = titles.length * 6;
+
+  return (
+    <div style={{
+      background: "linear-gradient(90deg,#0a1f12 0%,var(--forest) 30%,var(--forest) 70%,#0a1f12 100%)",
+      borderTop: "1px solid rgba(200,168,75,.25)",
+      borderBottom: "1px solid rgba(200,168,75,.25)",
+      display: "flex", alignItems: "center", height: 46, overflow: "hidden",
+    }}>
+      {/* Label badge */}
+      <div style={{
+        flexShrink: 0, position: "relative", zIndex: 2,
+        background: "linear-gradient(135deg,var(--gold),#e8c05a)",
+        color: "var(--forest)", padding: "0 20px", height: "100%",
+        display: "flex", alignItems: "center", gap: 7,
+        fontWeight: 800, fontSize: 12, letterSpacing: ".6px",
+        clipPath: "polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%)",
+        paddingInlineEnd: 28,
+      }}>
+        <span style={{ fontSize: 10 }}>📡</span>
+        آخر الإضافات
+      </div>
+
+      {/* Fade-left overlay */}
+      <div style={{ position: "absolute", right: 0, width: 80, height: 46, zIndex: 1, pointerEvents: "none",
+        background: "linear-gradient(to left,#0a1f12,transparent)" }} />
+
+      {/* Scrolling track */}
+      <div style={{ overflow: "hidden", flex: 1 }}>
+        <div style={{
+          display: "inline-flex", gap: 0,
+          animation: `newsticker ${duration}s linear infinite`,
+          willChange: "transform",
+        }}>
+          {repeated.map((title, i) => (
+            <span key={i} style={{
+              display: "inline-flex", alignItems: "center", whiteSpace: "nowrap",
+              color: "rgba(255,255,255,.82)", fontSize: 13, fontWeight: 500,
+              padding: "0 32px",
+            }}>
+              <span style={{ color: "var(--gold)", fontSize: 7, marginInlineEnd: 14, opacity: .8 }}>◆</span>
+              {title}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes newsticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-33.333%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          div[style*="newsticker"] { animation: none; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 /* ─── Hero ────────────────────────────────────────────────── */
 function Hero() {
   return (
@@ -281,6 +359,7 @@ export default function HomePage() {
       <Header />
       <main style={{ flex: 1 }}>
         <Hero />
+        <NewsTicker />
         <Section title="المشاهدة" icon="🎬" href="/video"    mediaType={1} count={4} />
         <Section title="السماع"   icon="🎧" href="/audio"    mediaType={3} count={4} />
         <Section title="الاطلاع"  icon="📖" href="/articles" mediaType={5} count={4} />
