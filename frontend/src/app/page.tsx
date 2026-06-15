@@ -5,58 +5,80 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { fetchPublicContents, type PublicItem } from "@/lib/public";
 
-/* ─── Hero Slider ─────────────────────────────────────────── */
+/* ─── Static slides data ──────────────────────────────────── */
+const SLIDES = [
+  {
+    bg: "linear-gradient(135deg,#0f2d1e 0%,#1a4332 40%,#0a1f12 100%)",
+    accent: "#C8A84B",
+    tag: "المشاهدة",
+    icon: "🎬",
+    title: "استمتع بأفضل مقاطع الفيديو",
+    desc: "تصفّح مكتبة ضخمة من مقاطع الفيديو المنتقاة بعناية في مختلف الموضوعات والمجالات.",
+    href: "/video",
+    cta: "تصفح الفيديوهات",
+    shape: (
+      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
+        <circle cx="250" cy="250" r="240" fill="none" stroke="#C8A84B" strokeWidth="2"/>
+        <circle cx="250" cy="250" r="180" fill="none" stroke="#C8A84B" strokeWidth="1.5"/>
+        <polygon points="190,140 380,250 190,360" fill="#C8A84B"/>
+      </svg>
+    ),
+  },
+  {
+    bg: "linear-gradient(135deg,#1a1030 0%,#2d1a52 40%,#0f0a1f 100%)",
+    accent: "#8B5CF6",
+    tag: "السماع",
+    icon: "🎧",
+    title: "اسمع واستمتع بالمحتوى الصوتي",
+    desc: "مجموعة متنوعة من المحتوى الصوتي الممتاز — محاضرات، دروس، وبرامج متخصصة.",
+    href: "/audio",
+    cta: "استمع الآن",
+    shape: (
+      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
+        <circle cx="250" cy="250" r="240" fill="none" stroke="#8B5CF6" strokeWidth="2"/>
+        <path d="M200 160 Q200 110 250 110 Q300 110 300 160 L300 250 Q300 300 250 300 Q200 300 200 250 Z" fill="#8B5CF6"/>
+        <line x1="250" y1="300" x2="250" y2="350" stroke="#8B5CF6" strokeWidth="8"/>
+        <line x1="200" y1="350" x2="300" y2="350" stroke="#8B5CF6" strokeWidth="8"/>
+      </svg>
+    ),
+  },
+  {
+    bg: "linear-gradient(135deg,#1a2a10 0%,#2d4a1a 40%,#0f1f08 100%)",
+    accent: "#10B981",
+    tag: "الاطلاع",
+    icon: "📖",
+    title: "اقرأ واطّلع على أحدث المقالات",
+    desc: "مقالات ومستندات متنوعة تغطي مختلف الموضوعات — أضف إلى معرفتك كل يوم.",
+    href: "/articles",
+    cta: "اقرأ الآن",
+    shape: (
+      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
+        <circle cx="250" cy="250" r="240" fill="none" stroke="#10B981" strokeWidth="2"/>
+        <rect x="130" y="120" width="240" height="300" rx="12" fill="#10B981"/>
+        <line x1="170" y1="200" x2="330" y2="200" stroke="#0f1f08" strokeWidth="10"/>
+        <line x1="170" y1="250" x2="330" y2="250" stroke="#0f1f08" strokeWidth="10"/>
+        <line x1="170" y1="300" x2="260" y2="300" stroke="#0f1f08" strokeWidth="10"/>
+      </svg>
+    ),
+  },
+];
+
+/* ─── Hero Slider (3 static slides) ─────────────────────────── */
 function HeroSlider() {
-  const [items, setItems] = useState<PublicItem[]>([]);
   const [cur, setCur] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const ctrl = new AbortController();
-    fetchPublicContents({ pageSize: 8, isFeatured: true }, ctrl.signal)
-      .then(d => { setItems(d.items); setLoaded(true); })
-      .catch(() => setLoaded(true));
-    return () => ctrl.abort();
-  }, []);
-
-  const count = Math.max(items.length, 1);
-  const next = useCallback(() => setCur(c => (c + 1) % count), [count]);
-  const prev = useCallback(() => setCur(c => (c - 1 + count) % count), [count]);
+  const next = useCallback(() => setCur(c => (c + 1) % SLIDES.length), []);
+  const prev = useCallback(() => setCur(c => (c - 1 + SLIDES.length) % SLIDES.length), []);
 
   useEffect(() => {
-    if (!items.length || paused) return;
+    if (paused) return;
     timerRef.current = setInterval(next, 5000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [items.length, next, paused]);
+  }, [next, paused]);
 
-  const FALLBACK_COLORS = [
-    "linear-gradient(135deg,#1a3a2a,#0a1f12)",
-    "linear-gradient(135deg,#1a2a3a,#0a0f1f)",
-    "linear-gradient(135deg,#2a1a3a,#10062a)",
-    "linear-gradient(135deg,#3a2a1a,#1f1200)",
-  ];
-
-  if (!loaded) {
-    return (
-      <div style={{ height: 520, background: "linear-gradient(135deg,var(--forest),#0a1f12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid var(--gold)", borderTopColor: "transparent", animation: "spin 1s linear infinite" }} />
-      </div>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <div style={{ height: 520, background: "linear-gradient(135deg,var(--forest),#0a1f12)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <div style={{ fontSize: 56 }}>🎬</div>
-        <p style={{ color: "rgba(255,255,255,.6)", fontSize: 16 }}>لا يوجد محتوى مميز حالياً</p>
-        <a href="/contents" style={{ padding: "10px 28px", borderRadius: 12, background: "var(--gold)", color: "var(--forest)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>تصفح المحتوى</a>
-      </div>
-    );
-  }
-
-  const item = items[cur];
+  const slide = SLIDES[cur];
 
   return (
     <div
@@ -65,104 +87,89 @@ function HeroSlider() {
       onMouseLeave={() => setPaused(false)}
     >
       {/* Slides */}
-      {items.map((it, i) => (
-        <div key={it.id} style={{
+      {SLIDES.map((s, i) => (
+        <div key={i} style={{
           position: "absolute", inset: 0,
+          background: s.bg,
           opacity: i === cur ? 1 : 0,
           transition: "opacity .9s ease",
           zIndex: i === cur ? 1 : 0,
         }}>
-          {it.thumbnailUrl
-            ? <img src={it.thumbnailUrl} alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover",
-                  transform: i === cur ? "scale(1.04)" : "scale(1)",
-                  transition: "transform 6s ease" }} />
-            : <div style={{ height: "100%", background: FALLBACK_COLORS[i % FALLBACK_COLORS.length] }} />
-          }
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,.90) 0%,rgba(0,0,0,.45) 45%,rgba(0,0,0,.08) 100%)" }} />
+          {s.shape}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to left, transparent 30%, rgba(0,0,0,.6) 100%)" }} />
         </div>
       ))}
 
       {/* Content */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "0 32px 52px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-            {item.categoryName && (
-              <span style={{ background: "var(--gold)", color: "var(--forest)", fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 20 }}>
-                {item.categoryName}
-              </span>
-            )}
-            {item.isFeatured && (
-              <span style={{ background: "rgba(255,255,255,.15)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid rgba(255,255,255,.25)" }}>
-                ★ مميز
-              </span>
-            )}
-          </div>
-          <h1 style={{
-            color: "#fff", fontSize: "clamp(22px,4vw,38px)", fontWeight: 800, lineHeight: 1.3,
-            margin: "0 0 14px", fontFamily: "'Noto Kufi Arabic',sans-serif", maxWidth: 660,
-            textShadow: "0 2px 12px rgba(0,0,0,.4)",
-          }}>
-            {item.title}
-          </h1>
-          {item.summary && (
-            <p style={{ color: "rgba(255,255,255,.72)", fontSize: 15, lineHeight: 1.7, marginBottom: 24, maxWidth: 540 }}>
-              {item.summary.length > 140 ? item.summary.slice(0, 140) + "…" : item.summary}
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+          <div style={{ maxWidth: 580 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${slide.accent}22`, border: `1px solid ${slide.accent}55`, color: slide.accent, fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 20, marginBottom: 18 }}>
+              <span>{slide.icon}</span> {slide.tag}
+            </div>
+            <h1 style={{
+              color: "#fff", fontSize: "clamp(24px,4vw,42px)", fontWeight: 800, lineHeight: 1.3,
+              margin: "0 0 16px", fontFamily: "'Noto Kufi Arabic',sans-serif",
+              textShadow: "0 2px 16px rgba(0,0,0,.5)",
+            }}>
+              {slide.title}
+            </h1>
+            <p style={{ color: "rgba(255,255,255,.72)", fontSize: 16, lineHeight: 1.7, marginBottom: 28, maxWidth: 480 }}>
+              {slide.desc}
             </p>
-          )}
-          <HeroButton item={item} />
+            <SlideBtn href={slide.href} label={slide.cta} color={slide.accent} />
+          </div>
         </div>
       </div>
 
       {/* Progress bar */}
       {!paused && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, zIndex: 3, background: "rgba(255,255,255,.15)" }}>
-          <div key={cur} style={{ height: "100%", background: "var(--gold)", animation: "progress 5s linear forwards" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, zIndex: 3, background: "rgba(255,255,255,.12)" }}>
+          <div key={cur} style={{ height: "100%", background: slide.accent, animation: "progress 5s linear forwards" }} />
         </div>
       )}
 
-      {/* Counter badge */}
+      {/* Counter */}
       <div style={{ position: "absolute", top: 20, left: 20, zIndex: 3, background: "rgba(0,0,0,.45)", backdropFilter: "blur(10px)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 13px", borderRadius: 20, border: "1px solid rgba(255,255,255,.15)" }}>
-        {cur + 1} / {items.length}
+        {cur + 1} / {SLIDES.length}
       </div>
 
-      {/* Arrow prev */}
       <ArrowBtn side="right" onClick={prev} />
-      {/* Arrow next */}
-      <ArrowBtn side="left" onClick={next} />
+      <ArrowBtn side="left"  onClick={next} />
 
       {/* Dots */}
       <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3, display: "flex", gap: 7, alignItems: "center" }}>
-        {items.map((_, i) => (
+        {SLIDES.map((s, i) => (
           <button key={i} onClick={() => setCur(i)} style={{
             width: i === cur ? 28 : 8, height: 8, borderRadius: 4, border: "none",
-            background: i === cur ? "var(--gold)" : "rgba(255,255,255,.35)",
+            background: i === cur ? s.accent : "rgba(255,255,255,.35)",
             cursor: "pointer", transition: "all .35s", padding: 0,
           }} />
         ))}
       </div>
 
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes progress { from { width: 0% } to { width: 100% } }
       `}</style>
     </div>
   );
 }
 
-function HeroButton({ item }: { item: PublicItem }) {
+function SlideBtn({ href, label, color }: { href: string; label: string; color: string }) {
   const [hover, setHover] = useState(false);
   return (
-    <a href="/contents"
+    <a href={href}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
         display: "inline-flex", alignItems: "center", gap: 8,
-        padding: "12px 28px", borderRadius: 14, background: hover ? "var(--gold-2)" : "var(--gold)",
-        color: "var(--forest)", fontSize: 14, fontWeight: 700, textDecoration: "none",
-        transform: hover ? "translateY(-1px)" : "none", transition: "all .2s",
-        boxShadow: hover ? "0 8px 24px rgba(200,168,75,.35)" : "none",
+        padding: "12px 28px", borderRadius: 14,
+        background: hover ? color : `${color}dd`,
+        color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none",
+        transform: hover ? "translateY(-2px)" : "none", transition: "all .2s",
+        boxShadow: hover ? `0 8px 24px ${color}55` : "none",
+        border: `1px solid ${color}`,
       }}>
-      استعرض المحتوى
+      {label}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M5 12h14M12 5l7 7-7 7" />
       </svg>
