@@ -1,366 +1,276 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { fetchPublicContents, type PublicItem } from "@/lib/public";
 
-/* ─── Static slides data ──────────────────────────────────── */
-const SLIDES = [
-  {
-    bg: "linear-gradient(135deg,#0f2d1e 0%,#1a4332 40%,#0a1f12 100%)",
-    accent: "#C8A84B",
-    tag: "المشاهدة",
-    icon: "🎬",
-    title: "استمتع بأفضل مقاطع الفيديو",
-    desc: "تصفّح مكتبة ضخمة من مقاطع الفيديو المنتقاة بعناية في مختلف الموضوعات والمجالات.",
-    href: "/video",
-    cta: "تصفح الفيديوهات",
-    shape: (
-      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
-        <circle cx="250" cy="250" r="240" fill="none" stroke="#C8A84B" strokeWidth="2"/>
-        <circle cx="250" cy="250" r="180" fill="none" stroke="#C8A84B" strokeWidth="1.5"/>
-        <polygon points="190,140 380,250 190,360" fill="#C8A84B"/>
-      </svg>
-    ),
-  },
-  {
-    bg: "linear-gradient(135deg,#1a1030 0%,#2d1a52 40%,#0f0a1f 100%)",
-    accent: "#8B5CF6",
-    tag: "السماع",
-    icon: "🎧",
-    title: "اسمع واستمتع بالمحتوى الصوتي",
-    desc: "مجموعة متنوعة من المحتوى الصوتي الممتاز — محاضرات، دروس، وبرامج متخصصة.",
-    href: "/audio",
-    cta: "استمع الآن",
-    shape: (
-      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
-        <circle cx="250" cy="250" r="240" fill="none" stroke="#8B5CF6" strokeWidth="2"/>
-        <path d="M200 160 Q200 110 250 110 Q300 110 300 160 L300 250 Q300 300 250 300 Q200 300 200 250 Z" fill="#8B5CF6"/>
-        <line x1="250" y1="300" x2="250" y2="350" stroke="#8B5CF6" strokeWidth="8"/>
-        <line x1="200" y1="350" x2="300" y2="350" stroke="#8B5CF6" strokeWidth="8"/>
-      </svg>
-    ),
-  },
-  {
-    bg: "linear-gradient(135deg,#1a2a10 0%,#2d4a1a 40%,#0f1f08 100%)",
-    accent: "#10B981",
-    tag: "الاطلاع",
-    icon: "📖",
-    title: "اقرأ واطّلع على أحدث المقالات",
-    desc: "مقالات ومستندات متنوعة تغطي مختلف الموضوعات — أضف إلى معرفتك كل يوم.",
-    href: "/articles",
-    cta: "اقرأ الآن",
-    shape: (
-      <svg viewBox="0 0 500 500" style={{ position: "absolute", left: "5%", top: "50%", transform: "translateY(-50%)", width: "min(420px,45vw)", opacity: .07 }}>
-        <circle cx="250" cy="250" r="240" fill="none" stroke="#10B981" strokeWidth="2"/>
-        <rect x="130" y="120" width="240" height="300" rx="12" fill="#10B981"/>
-        <line x1="170" y1="200" x2="330" y2="200" stroke="#0f1f08" strokeWidth="10"/>
-        <line x1="170" y1="250" x2="330" y2="250" stroke="#0f1f08" strokeWidth="10"/>
-        <line x1="170" y1="300" x2="260" y2="300" stroke="#0f1f08" strokeWidth="10"/>
-      </svg>
-    ),
-  },
+/* ─── Constants ────────────────────────────────────────────── */
+const TOPICS = [
+  { href: "/video",    label: "المشاهدة", icon: "🎬", color: "#10B981" },
+  { href: "/audio",    label: "السماع",   icon: "🎧", color: "#8B5CF6" },
+  { href: "/articles", label: "الاطلاع",  icon: "📖", color: "#3B82F6" },
+  { href: "/gallery",  label: "صور",      icon: "🖼️", color: "#F59E0B" },
 ];
 
-/* ─── Hero Slider (3 static slides) ─────────────────────────── */
-function HeroSlider() {
-  const [cur, setCur] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+const TYPE_META: Record<number, { label: string; color: string; playIcon: boolean }> = {
+  1: { label: "فيديو", color: "#10B981", playIcon: true  },
+  2: { label: "صورة",  color: "#F59E0B", playIcon: false },
+  3: { label: "صوت",   color: "#8B5CF6", playIcon: false },
+  5: { label: "مقال",  color: "#3B82F6", playIcon: false },
+};
 
-  const next = useCallback(() => setCur(c => (c + 1) % SLIDES.length), []);
-  const prev = useCallback(() => setCur(c => (c - 1 + SLIDES.length) % SLIDES.length), []);
+function fmtDate(iso: string | null) {
+  return iso
+    ? new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" })
+    : "";
+}
 
-  useEffect(() => {
-    if (paused) return;
-    timerRef.current = setInterval(next, 5000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [next, paused]);
-
-  const slide = SLIDES[cur];
-
+/* ─── Hero ────────────────────────────────────────────────── */
+function Hero() {
   return (
-    <div
-      className="hero-slider"
-      style={{ position: "relative", overflow: "hidden", userSelect: "none" }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      {/* Slides */}
-      {SLIDES.map((s, i) => (
-        <div key={i} style={{
-          position: "absolute", inset: 0,
-          background: s.bg,
-          opacity: i === cur ? 1 : 0,
-          transition: "opacity .9s ease",
-          zIndex: i === cur ? 1 : 0,
-        }}>
-          {s.shape}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to left, transparent 30%, rgba(0,0,0,.6) 100%)" }} />
-        </div>
-      ))}
+    <div style={{
+      background: "linear-gradient(150deg,var(--forest) 0%,#1a4332 55%,#0a1f12 100%)",
+      padding: "72px 0 60px", position: "relative", overflow: "hidden",
+    }}>
+      {/* Dot grid texture */}
+      <div style={{ position: "absolute", inset: 0, opacity: .045,
+        backgroundImage: "radial-gradient(circle,#C8A84B 1px,transparent 1px)",
+        backgroundSize: "36px 36px" }} />
+      {/* Top gold stripe — TED red-bar equivalent */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5,
+        background: "linear-gradient(90deg,var(--gold),#e8c05a,var(--gold))" }} />
 
-      {/* Content */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "0 20px" }}>
-          <div style={{ maxWidth: 580 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${slide.accent}22`, border: `1px solid ${slide.accent}55`, color: slide.accent, fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
-              <span>{slide.icon}</span> {slide.tag}
-            </div>
-            <h1 style={{
-              color: "#fff", fontSize: "clamp(20px,4vw,42px)", fontWeight: 800, lineHeight: 1.3,
-              margin: "0 0 12px", fontFamily: "'Noto Kufi Arabic',sans-serif",
-              textShadow: "0 2px 16px rgba(0,0,0,.5)",
-            }}>
-              {slide.title}
-            </h1>
-            <p className="slide-desc" style={{ color: "rgba(255,255,255,.72)", fontSize: 15, lineHeight: 1.7, marginBottom: 22, maxWidth: 480 }}>
-              {slide.desc}
-            </p>
-            <SlideBtn href={slide.href} label={slide.cta} color={slide.accent} />
+      <div className="hp-wrap" style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+          {/* Eyebrow */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(200,168,75,.12)", border: "1px solid rgba(200,168,75,.3)",
+            color: "var(--gold)", fontSize: 12, fontWeight: 700, padding: "6px 20px",
+            borderRadius: 999, marginBottom: 26, letterSpacing: ".4px" }}>
+            🌙 منصة BMedia للمحتوى الرقمي
+          </div>
+
+          {/* Main headline — TED-style */}
+          <h1 style={{
+            color: "#fff", margin: "0 0 18px",
+            fontSize: "clamp(30px,5.5vw,58px)", fontWeight: 900, lineHeight: 1.15,
+            fontFamily: "'Noto Kufi Arabic',sans-serif", letterSpacing: "-.5px",
+          }}>
+            أفكار تستحق المشاركة
+          </h1>
+
+          {/* Sub */}
+          <p style={{
+            color: "rgba(255,255,255,.6)", margin: "0 0 40px",
+            fontSize: "clamp(15px,2vw,18px)", lineHeight: 1.75, maxWidth: 520,
+            marginInline: "auto",
+          }}>
+            تصفّح مكتبة متنوعة من المحتوى — فيديو، صوت، مقالات وصور منتقاة بعناية.
+          </p>
+
+          {/* Topic pills */}
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            {TOPICS.map(t => (
+              <TopicPill key={t.href} {...t} />
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Progress bar */}
-      {!paused && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, zIndex: 3, background: "rgba(255,255,255,.12)" }}>
-          <div key={cur} style={{ height: "100%", background: slide.accent, animation: "progress 5s linear forwards" }} />
-        </div>
-      )}
-
-      {/* Counter */}
-      <div style={{ position: "absolute", top: 20, left: 20, zIndex: 3, background: "rgba(0,0,0,.45)", backdropFilter: "blur(10px)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 13px", borderRadius: 20, border: "1px solid rgba(255,255,255,.15)" }}>
-        {cur + 1} / {SLIDES.length}
-      </div>
-
-      <ArrowBtn side="right" onClick={prev} />
-      <ArrowBtn side="left"  onClick={next} />
-
-      {/* Dots */}
-      <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3, display: "flex", gap: 7, alignItems: "center" }}>
-        {SLIDES.map((s, i) => (
-          <button key={i} onClick={() => setCur(i)} style={{
-            width: i === cur ? 28 : 8, height: 8, borderRadius: 4, border: "none",
-            background: i === cur ? s.accent : "rgba(255,255,255,.35)",
-            cursor: "pointer", transition: "all .35s", padding: 0,
-          }} />
-        ))}
-      </div>
-
-      <style>{`
-        @keyframes progress { from { width: 0% } to { width: 100% } }
-        .hero-slider { height: 520px; }
-        @media (max-width: 768px) { .hero-slider { height: 380px; } .slide-desc { display: none; } }
-        @media (max-width: 480px) { .hero-slider { height: 300px; } }
-      `}</style>
     </div>
   );
 }
 
-function SlideBtn({ href, label, color }: { href: string; label: string; color: string }) {
-  const [hover, setHover] = useState(false);
+function TopicPill({ href, icon, label, color }: typeof TOPICS[0]) {
+  const [h, setH] = useState(false);
   return (
     <a href={href}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 8,
-        padding: "12px 28px", borderRadius: 14,
-        background: hover ? color : `${color}dd`,
-        color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none",
-        transform: hover ? "translateY(-2px)" : "none", transition: "all .2s",
-        boxShadow: hover ? `0 8px 24px ${color}55` : "none",
-        border: `1px solid ${color}`,
+        display: "inline-flex", alignItems: "center", gap: 7,
+        padding: "10px 22px", borderRadius: 999,
+        background: h ? color + "40" : color + "20",
+        border: `1.5px solid ${h ? color : color + "50"}`,
+        color: "#fff", fontSize: 14, fontWeight: 600,
+        textDecoration: "none", transition: "all .18s",
+        transform: h ? "translateY(-2px)" : "none",
+        boxShadow: h ? `0 6px 20px ${color}33` : "none",
       }}>
+      <span style={{ fontSize: 16 }}>{icon}</span>
       {label}
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
     </a>
   );
 }
 
-function ArrowBtn({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
-  const [hover, setHover] = useState(false);
+/* ─── Content Card (TED-style) ───────────────────────────── */
+function ContentCard({ item, mediaType, href }: { item: PublicItem; mediaType: number; href: string }) {
+  const [h, setH] = useState(false);
+  const meta = TYPE_META[mediaType] ?? TYPE_META[1];
+
   return (
-    <button onClick={onClick}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{
-        position: "absolute", top: "50%", [side]: 20, transform: "translateY(-50%)", zIndex: 3,
-        width: 46, height: 46, borderRadius: "50%", border: "1px solid rgba(255,255,255,.25)",
-        background: hover ? "rgba(0,0,0,.65)" : "rgba(0,0,0,.35)",
-        color: "#fff", cursor: "pointer", backdropFilter: "blur(10px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        transition: "background .2s", fontSize: 22, fontWeight: 300,
-      }}>
-      {side === "right" ? "›" : "‹"}
-    </button>
-  );
-}
+    <a href={href} style={{ display: "block", textDecoration: "none" }}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
 
-/* ─── Quick Links ─────────────────────────────────────────── */
-const QUICK_LINKS = [
-  { href: "/articles", icon: "📖", label: "الاطلاع",  sub: "مقالات ومستندات", color: "#3B82F6" },
-  { href: "/audio",    icon: "🎧", label: "السماع",   sub: "محتوى صوتي",       color: "#8B5CF6" },
-  { href: "/video",    icon: "🎬", label: "المشاهدة", sub: "مقاطع فيديو",      color: "#10B981" },
-  { href: "/gallery",  icon: "🖼️", label: "صور",      sub: "معرض الصور",       color: "#F59E0B" },
-];
-
-function QuickLinkCard({ href, icon, label, sub, color }: typeof QUICK_LINKS[0]) {
-  const [hover, setHover] = useState(false);
-  return (
-    <a href={href}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{
-        display: "flex", alignItems: "center", gap: 14, padding: "18px 20px",
-        borderRadius: 18, border: `1px solid ${hover ? color + "44" : "var(--line)"}`,
-        background: hover ? `${color}0c` : "var(--surface)", textDecoration: "none",
-        transition: "all .2s", boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
-        transform: hover ? "translateY(-2px)" : "none",
-      }}>
-      <div style={{ width: 48, height: 48, borderRadius: 14, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div>
-        <p style={{ color: "var(--ink)", fontWeight: 700, fontSize: 15, margin: 0 }}>{label}</p>
-        <p style={{ color: "var(--muted)", fontSize: 12, margin: "3px 0 0" }}>{sub}</p>
-      </div>
-      <svg style={{ marginRight: "auto", color: hover ? color : "var(--muted-2)", transition: "color .2s, transform .2s", transform: hover ? "translateX(-3px)" : "none" }}
-        width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
-    </a>
-  );
-}
-
-function QuickLinks() {
-  return (
-    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 24px 0" }}>
-      <div className="ql-grid">
-        {QUICK_LINKS.map(l => <QuickLinkCard key={l.href} {...l} />)}
-      </div>
-    </section>
-  );
-}
-
-/* ─── Mini Card ───────────────────────────────────────────── */
-const ACCENT = ["#3B82F6","#8B5CF6","#10B981","#F59E0B","#EC4899","#06B6D4","#EF4444"];
-const accentFor = (t: string) => ACCENT[t.charCodeAt(0) % ACCENT.length];
-
-const TYPE_ICONS: Record<number, JSX.Element> = {
-  1: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="5,3 19,12 5,21" /></svg>,
-  2: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>,
-  3: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
-  5: <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-};
-
-function MiniCard({ item, mediaType, href }: { item: PublicItem; mediaType: number; href: string }) {
-  const [hover, setHover] = useState(false);
-  const c = accentFor(item.title);
-  return (
-    <a href={href}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{
-        flexShrink: 0, width: 210, borderRadius: 16, overflow: "hidden",
-        background: "var(--surface)", border: `1px solid ${hover ? c + "44" : "var(--line)"}`,
-        textDecoration: "none", display: "block",
-        boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
-        transform: hover ? "translateY(-4px)" : "none", transition: "all .2s",
-      }}>
-      <div style={{ position: "relative", height: 126, overflow: "hidden", background: `linear-gradient(135deg,${c}18,${c}30)` }}>
+      {/* Thumbnail */}
+      <div style={{ position: "relative", paddingTop: "56.25%", overflow: "hidden",
+        borderRadius: 6, background: `linear-gradient(135deg,${meta.color}18,${meta.color}30)` }}>
         {item.thumbnailUrl
           ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
-              style={{ width: "100%", height: "100%", objectFit: "cover", transform: hover ? "scale(1.07)" : "scale(1)", transition: "transform .35s" }} />
-          : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: c }}>
-              {TYPE_ICONS[mediaType]}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
+                objectFit: "cover", transform: h ? "scale(1.04)" : "scale(1)", transition: "transform .45s" }} />
+          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 36, color: meta.color, opacity: .55 }}>
+              {mediaType === 1 ? "🎬" : mediaType === 3 ? "🎧" : mediaType === 5 ? "📄" : "🖼️"}
             </div>
         }
-        {mediaType === 1 && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.18)" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.88)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="#1a1a1a" style={{ marginRight: -2 }}><polygon points="5,3 19,12 5,21" /></svg>
+        {/* Type badge */}
+        <div style={{ position: "absolute", top: 10, right: 10,
+          background: meta.color, color: "#fff",
+          fontSize: 11, fontWeight: 700, padding: "3px 11px", borderRadius: 999 }}>
+          {meta.label}
+        </div>
+        {/* Play button overlay for video */}
+        {meta.playIcon && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
+            justifyContent: "center", background: h ? "rgba(0,0,0,.3)" : "rgba(0,0,0,.15)", transition: "background .2s" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%",
+              background: h ? "var(--gold)" : "rgba(255,255,255,.88)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: h ? "scale(1.12)" : "scale(1)", transition: "all .2s" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={h ? "var(--forest)" : "#1a1a1a"} style={{ marginRight: -2 }}>
+                <polygon points="5,3 19,12 5,21" />
+              </svg>
             </div>
           </div>
         )}
         {item.isFeatured && (
-          <div style={{ position: "absolute", top: 6, right: 6, background: "var(--gold)", color: "var(--forest)", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>مميز</div>
+          <div style={{ position: "absolute", top: 10, left: 10,
+            background: "var(--gold)", color: "var(--forest)",
+            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999 }}>مميز</div>
         )}
       </div>
-      <div style={{ padding: "10px 12px" }}>
-        <p style={{ color: "var(--ink)", fontSize: 13, fontWeight: 700, lineHeight: 1.4, margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+
+      {/* Thin color accent bar */}
+      <div style={{ height: 3, background: meta.color, borderRadius: "0 0 2px 2px",
+        transform: h ? "scaleX(1)" : "scaleX(.35)",
+        transition: "transform .3s", transformOrigin: "right" }} />
+
+      {/* Text */}
+      <div style={{ paddingTop: 14 }}>
+        <h3 style={{
+          color: "var(--ink)", fontSize: 16, fontWeight: 700, lineHeight: 1.45,
+          margin: "0 0 7px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+          textDecoration: h ? "underline" : "none", textDecorationColor: "var(--gold)",
+          textUnderlineOffset: 3,
+        }}>
           {item.title}
-        </p>
-        {item.categoryName && <p style={{ color: c, fontSize: 11, fontWeight: 600, margin: 0 }}>{item.categoryName}</p>}
+        </h3>
+        {item.summary && (
+          <p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.55, margin: "0 0 10px",
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {item.summary}
+          </p>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          {item.categoryName && (
+            <span style={{ fontSize: 12, color: meta.color, fontWeight: 700 }}>{item.categoryName}</span>
+          )}
+          {item.categoryName && item.publishedAt && (
+            <span style={{ fontSize: 12, color: "var(--muted-2)" }}>·</span>
+          )}
+          {item.publishedAt && (
+            <span style={{ fontSize: 12, color: "var(--muted-2)" }}>{fmtDate(item.publishedAt)}</span>
+          )}
+        </div>
       </div>
     </a>
   );
 }
 
-/* ─── Section Strip ───────────────────────────────────────── */
-function SectionStrip({ title, icon, href, mediaType }: { title: string; icon: string; href: string; mediaType: number }) {
+function CardSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div style={{ paddingTop: "56.25%", background: "var(--surface-2)", borderRadius: 6, position: "relative" }} />
+      <div style={{ height: 3, background: "var(--surface-2)", marginBottom: 14 }} />
+      <div style={{ height: 16, borderRadius: 4, background: "var(--surface-2)", width: "88%", marginBottom: 8 }} />
+      <div style={{ height: 13, borderRadius: 4, background: "var(--surface-2)", width: "65%", marginBottom: 8 }} />
+      <div style={{ height: 12, borderRadius: 4, background: "var(--surface-2)", width: "40%" }} />
+    </div>
+  );
+}
+
+/* ─── Content Section ──────────────────────────────────────── */
+function Section({ title, icon, href, mediaType, count = 4 }:
+  { title: string; icon: string; href: string; mediaType: number; count?: number }) {
   const [items, setItems] = useState<PublicItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const meta = TYPE_META[mediaType];
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchPublicContents({ pageSize: 6, mediaType }, ctrl.signal)
+    fetchPublicContents({ pageSize: count, mediaType }, ctrl.signal)
       .then(d => { setItems(d.items); setLoading(false); })
       .catch(() => setLoading(false));
     return () => ctrl.abort();
-  }, [mediaType]);
+  }, [mediaType, count]);
 
   return (
-    <section style={{ padding: "40px 0 0" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h2 style={{ color: "var(--ink)", fontWeight: 800, fontSize: 20, fontFamily: "'Noto Kufi Arabic',sans-serif", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-            <span>{icon}</span> {title}
-          </h2>
-          <SeeAllLink href={href} />
+    <section style={{ padding: "56px 0 0" }}>
+      <div className="hp-wrap">
+        {/* Section header — TED style */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: 28, paddingBottom: 18,
+          borderBottom: `2px solid var(--line)` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Left accent bar */}
+            <div style={{ width: 4, height: 26, borderRadius: 2, background: meta.color, flexShrink: 0 }} />
+            <h2 style={{ color: "var(--ink)", fontWeight: 800, fontSize: 22,
+              fontFamily: "'Noto Kufi Arabic',sans-serif", margin: 0,
+              display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 20 }}>{icon}</span>
+              {title}
+            </h2>
+          </div>
+          <SeeAll href={href} color={meta.color} />
         </div>
 
-        {/* Horizontal scroll row */}
-        <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 12, scrollbarWidth: "none" }}>
+        {/* Grid */}
+        <div className="hp-grid">
           {loading
-            ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+            ? Array.from({ length: count }).map((_, i) => <CardSkeleton key={i} />)
             : items.length === 0
-              ? <p style={{ color: "var(--muted)", fontSize: 14, padding: "20px 0" }}>لا يوجد محتوى حالياً</p>
-              : items.map(item => <MiniCard key={item.id} item={item} mediaType={mediaType} href={href} />)
+              ? <p style={{ color: "var(--muted)", fontSize: 14, gridColumn: "1/-1", padding: "20px 0" }}>
+                  لا يوجد محتوى حالياً
+                </p>
+              : items.map(item => (
+                  <ContentCard key={item.id} item={item} mediaType={mediaType} href={href} />
+                ))
           }
         </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: "var(--line)", marginTop: 20 }} />
       </div>
     </section>
   );
 }
 
-function SeeAllLink({ href }: { href: string }) {
-  const [hover, setHover] = useState(false);
+function SeeAll({ href, color }: { href: string; color: string }) {
+  const [h, setH] = useState(false);
   return (
     <a href={href}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ color: hover ? "var(--forest)" : "var(--muted)", fontSize: 13, fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 5, transition: "color .15s" }}>
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        color: h ? color : "var(--muted)", fontSize: 13, fontWeight: 700,
+        textDecoration: "none", padding: "7px 14px", borderRadius: 8,
+        border: `1.5px solid ${h ? color + "55" : "var(--line)"}`,
+        background: h ? color + "0d" : "transparent",
+        transition: "all .15s",
+      }}>
       رؤية الكل
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M5 12h14M12 5l7 7-7 7" />
       </svg>
     </a>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div className="animate-pulse" style={{ flexShrink: 0, width: 210, borderRadius: 16, overflow: "hidden", background: "var(--surface)", border: "1px solid var(--line)" }}>
-      <div style={{ height: 126, background: "var(--surface-2)" }} />
-      <div style={{ padding: "10px 12px" }}>
-        <div style={{ height: 13, borderRadius: 4, background: "var(--surface-2)", width: "80%", marginBottom: 6 }} />
-        <div style={{ height: 11, borderRadius: 4, background: "var(--surface-2)", width: "50%" }} />
-      </div>
-    </div>
   );
 }
 
@@ -370,20 +280,22 @@ export default function HomePage() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <Header />
       <main style={{ flex: 1 }}>
-        <HeroSlider />
-        <QuickLinks />
-        <SectionStrip title="المشاهدة" icon="🎬" href="/video"    mediaType={1} />
-        <SectionStrip title="السماع"   icon="🎧" href="/audio"    mediaType={3} />
-        <SectionStrip title="الاطلاع"  icon="📖" href="/articles" mediaType={5} />
-        <SectionStrip title="صور"      icon="🖼️" href="/gallery"  mediaType={2} />
-        <div style={{ height: 64 }} />
+        <Hero />
+        <Section title="المشاهدة" icon="🎬" href="/video"    mediaType={1} count={4} />
+        <Section title="السماع"   icon="🎧" href="/audio"    mediaType={3} count={4} />
+        <Section title="الاطلاع"  icon="📖" href="/articles" mediaType={5} count={4} />
+        <Section title="صور"      icon="🖼️" href="/gallery"  mediaType={2} count={4} />
+        <div style={{ height: 80 }} />
       </main>
       <Footer />
 
       <style>{`
-        .ql-grid { display: grid; gap: 16px; grid-template-columns: repeat(4,1fr); }
-        @media (max-width: 900px) { .ql-grid { grid-template-columns: repeat(2,1fr); } }
-        @media (max-width: 400px) { .ql-grid { grid-template-columns: 1fr; } }
+        .hp-wrap { max-width: 1280px; margin: 0 auto; padding-inline: 24px; }
+        .hp-grid { display: grid; gap: 32px 24px; grid-template-columns: repeat(4,1fr); }
+        @media (max-width: 1100px) { .hp-grid { grid-template-columns: repeat(3,1fr); } }
+        @media (max-width: 768px)  { .hp-grid { grid-template-columns: repeat(2,1fr); gap: 24px 16px; } }
+        @media (max-width: 480px)  { .hp-grid { grid-template-columns: 1fr; gap: 28px; }
+                                      .hp-wrap { padding-inline: 16px; } }
       `}</style>
     </div>
   );
