@@ -130,10 +130,8 @@ function SubcategoryBar({
     );
   }
 
-  /* Prefer the matched category's own subs; fallback to all subs */
-  const primarySubs = category?.subcategories ?? [];
-  const fallbackSubs = allCategories.flatMap(c => c.subcategories);
-  const subs = primarySubs.length > 0 ? primarySubs : fallbackSubs;
+  /* Prefer the matched category's own subs only */
+  const subs = category?.subcategories ?? [];
 
   if (subs.length === 0) return null;
 
@@ -253,9 +251,7 @@ export default function CategoryScreen({
   }, []);
 
   const activeSub = subId
-    ? (category?.subcategories.find(s => s.id === subId)
-        ?? allCategories.flatMap(c => c.subcategories).find(s => s.id === subId)
-        ?? null)
+    ? (category?.subcategories.find(s => s.id === subId) ?? null)
     : null;
   const activeItem = items.find(i => i.id === activeId) ?? null;
 
