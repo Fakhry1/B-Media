@@ -92,20 +92,20 @@ function SubPill({ label, active, onClick }: { label: string; active: boolean; o
 
 /* ─── Subcategory filter bar ─────────────────────────────── */
 /*
- * category === undefined  → still loading  → show skeleton
- * category === null       → not found in DB → hide bar (content still loads by mediaType)
- * subs.length === 0       → no subs        → hide bar
- * subs.length > 0         → show filter pills
+ * Tiers (in priority order):
+ *  1. category === undefined          → show skeleton (still loading)
+ *  2. category found + has subs       → show those subs as filters
+ *  3. category not found / no subs    → flatten ALL categories' subs as fallback
+ *  4. no subcategories anywhere       → hide bar entirely
  */
 function SubcategoryBar({
-  category, activeSubId, onSelect,
+  category, allCategories, activeSubId, onSelect,
 }: {
   category: PubCategory | null | undefined;
+  allCategories: PubCategory[];
   activeSubId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const subs = category?.subcategories ?? [];
-
   const barStyle: React.CSSProperties = {
     position: "sticky", top: 65, zIndex: 40,
     background: "color-mix(in srgb,var(--bg) 94%,transparent)",
@@ -114,6 +114,7 @@ function SubcategoryBar({
     borderBottom: "1px solid var(--line)",
   };
 
+  /* Still loading */
   if (category === undefined) {
     return (
       <div style={barStyle}>
@@ -129,7 +130,12 @@ function SubcategoryBar({
     );
   }
 
-  if (!category || subs.length === 0) return null;
+  /* Prefer the matched category's own subs; fallback to all subs */
+  const primarySubs = category?.subcategories ?? [];
+  const fallbackSubs = allCategories.flatMap(c => c.subcategories);
+  const subs = primarySubs.length > 0 ? primarySubs : fallbackSubs;
+
+  if (subs.length === 0) return null;
 
   return (
     <div style={barStyle}>
@@ -155,24 +161,33 @@ export function useCategoryData(
   mediaType: number,
 ) {
   // undefined = still loading, null = not found in DB
-  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined);
-  const [items, setItems] = useState<PublicItem[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [category, setCategory]       = useState<PubCategory | null | undefined>(undefined);
+  const [allCategories, setAllCats]   = useState<PubCategory[]>([]);
+  const [items, setItems]             = useState<PublicItem[]>([]);
+  const [totalPages, setTotalPages]   = useState(1);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(false);
 
-  /* Resolve the category by name once */
+  /* Resolve category by name (exact → case-insensitive → null) */
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => setCategory(cats.find(c => c.name === categoryName) ?? null))
-      .catch(e => { if (e.name !== "AbortError") setCategory(null); });
+      .then(cats => {
+        setAllCats(cats);
+        const norm = (s: string) => s.trim().toLowerCase();
+        const found =
+          cats.find(c => c.name === categoryName) ??
+          cats.find(c => norm(c.name) === norm(categoryName)) ??
+          null;
+        setCategory(found);
+      })
+      .catch(e => { if (e.name !== "AbortError") { setCategory(null); } });
     return () => ctrl.abort();
   }, [categoryName]);
 
   /* Fetch content: always by mediaType, also by categoryId when found */
   useEffect(() => {
-    if (category === undefined) return; // wait for category lookup
+    if (category === undefined) return;
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
@@ -181,7 +196,7 @@ export function useCategoryData(
         page,
         pageSize,
         mediaType,
-        categoryId: category?.id,         // scoped to this category when found
+        categoryId: category?.id,
         subcategoryId: subId ?? undefined,
       },
       ctrl.signal,
@@ -192,7 +207,7 @@ export function useCategoryData(
     return () => ctrl.abort();
   }, [category, page, subId, pageSize, mediaType]);
 
-  return { category, items, totalPages, loading, error };
+  return { category, allCategories, items, totalPages, loading, error };
 }
 
 /* ─── CategoryScreen ─────────────────────────────────────── */
@@ -222,7 +237,7 @@ export default function CategoryScreen({
   const [subId, setSubId]       = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const { category, items, totalPages, loading, error } = useCategoryData(
+  const { category, allCategories, items, totalPages, loading, error } = useCategoryData(
     categoryName, page, subId, pageSize, mediaType,
   );
 
@@ -237,7 +252,11 @@ export default function CategoryScreen({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const activeSub = category?.subcategories.find(s => s.id === subId) ?? null;
+  const activeSub = subId
+    ? (category?.subcategories.find(s => s.id === subId)
+        ?? allCategories.flatMap(c => c.subcategories).find(s => s.id === subId)
+        ?? null)
+    : null;
   const activeItem = items.find(i => i.id === activeId) ?? null;
 
   return (
@@ -279,7 +298,7 @@ export default function CategoryScreen({
       </div>
 
       {/* Sticky subcategory filter bar */}
-      <SubcategoryBar category={category} activeSubId={subId} onSelect={handleSub} />
+      <SubcategoryBar category={category} allCategories={allCategories} activeSubId={subId} onSelect={handleSub} />
 
       {/* Content */}
       <main style={{ flex: 1 }}>
