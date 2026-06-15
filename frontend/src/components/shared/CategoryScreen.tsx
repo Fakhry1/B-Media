@@ -19,27 +19,21 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   const range = (() => {
-    const total = Math.min(totalPages, 7);
-    if (totalPages <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
     if (page <= 4) return Array.from({ length: 7 }, (_, i) => i + 1);
     if (page >= totalPages - 3) return Array.from({ length: 7 }, (_, i) => totalPages - 6 + i);
     return Array.from({ length: 7 }, (_, i) => page - 3 + i);
   })();
 
   const btn = (label: ReactNode, active: boolean, disabled: boolean, onClick: () => void) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        minWidth: 38, height: 38, padding: "0 10px", borderRadius: 10,
-        border: `1px solid ${active ? "var(--gold)" : "var(--line)"}`,
-        background: active ? "var(--gold)" : "var(--surface)",
-        color: disabled ? "var(--muted-2)" : active ? "var(--forest)" : "var(--ink)",
-        fontWeight: active ? 700 : 400,
-        cursor: disabled ? "default" : "pointer",
-        fontSize: 13, transition: "all .15s",
-      }}
-    >
+    <button onClick={onClick} disabled={disabled} style={{
+      minWidth: 38, height: 38, padding: "0 10px", borderRadius: 10,
+      border: `1px solid ${active ? "var(--gold)" : "var(--line)"}`,
+      background: active ? "var(--gold)" : "var(--surface)",
+      color: disabled ? "var(--muted-2)" : active ? "var(--forest)" : "var(--ink)",
+      fontWeight: active ? 700 : 400, cursor: disabled ? "default" : "pointer",
+      fontSize: 13, transition: "all .15s",
+    }}>
       {label}
     </button>
   );
@@ -58,10 +52,7 @@ export function SkeletonGrid({ count, ratio = "56.25%" }: { count: number; ratio
   return (
     <div className="cs-grid">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="animate-pulse" style={{
-          borderRadius: 20, overflow: "hidden",
-          background: "var(--surface)", border: "1px solid var(--line)",
-        }}>
+        <div key={i} className="animate-pulse" style={{ borderRadius: 20, overflow: "hidden", background: "var(--surface)", border: "1px solid var(--line)" }}>
           <div style={{ paddingTop: ratio, background: "var(--surface-2)" }} />
           <div style={{ padding: "14px 16px" }}>
             <div style={{ height: 14, borderRadius: 6, background: "var(--surface-2)", width: "70%", marginBottom: 8 }} />
@@ -74,36 +65,91 @@ export function SkeletonGrid({ count, ratio = "56.25%" }: { count: number; ratio
 }
 
 /* ─── SubcategoryTabs ────────────────────────────────────── */
+/*
+ * category === undefined  → still loading (show skeleton pills)
+ * category === null       → not found / no subcategories (hide bar)
+ * subs.length === 0       → category exists but has no subs (hide bar)
+ */
 function SubcategoryTabs({
   category, activeId, onSelect,
 }: {
-  category: PubCategory | null;
+  category: PubCategory | null | undefined;
   activeId: string | null;
   onSelect: (id: string | null) => void;
 }) {
   const subs = category?.subcategories ?? [];
+
+  const barStyle: React.CSSProperties = {
+    position: "sticky",
+    top: 65,
+    zIndex: 40,
+    background: "color-mix(in srgb,var(--bg) 94%,transparent)",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    borderBottom: "1px solid var(--line)",
+  };
+
+  /* Loading skeleton */
+  if (category === undefined) {
+    return (
+      <div style={barStyle}>
+        <div className="cs-container">
+          <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0", overflowX: "hidden" }}>
+            <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>التصنيفات:</span>
+            {[80, 110, 90, 130, 100].map((w, i) => (
+              <div key={i} className="animate-pulse" style={{ flexShrink: 0, height: 32, width: w, borderRadius: 999, background: "var(--surface-2)" }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* No subcategories — don't render anything */
+  if (subs.length === 0) return null;
+
   return (
-    <div style={{
-      display: "flex", gap: 8, overflowX: "auto",
-      padding: "16px 0 0", scrollbarWidth: "none",
-    }}>
-      {[{ id: null, name: "الكل" }, ...subs].map(sub => {
-        const active = sub.id === activeId;
-        return (
-          <button key={sub.id ?? "all"} onClick={() => onSelect(sub.id)}
-            style={{
-              flexShrink: 0, padding: "7px 20px", borderRadius: 999, border: "1px solid",
-              borderColor: active ? "var(--gold)" : "var(--line)",
-              background: active ? "var(--gold)" : "transparent",
-              color: active ? "var(--forest)" : "var(--ink)",
-              fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all .15s",
-            }}
-          >
-            {sub.name}
-          </button>
-        );
-      })}
+    <div style={barStyle}>
+      <div className="cs-container">
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0", overflowX: "auto", scrollbarWidth: "none" }}>
+
+          {/* Label */}
+          <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0, paddingLeft: 2 }}>
+            تصفية:
+          </span>
+
+          {/* "All" + subcategory pills */}
+          {([{ id: null as string | null, name: "الكل" }, ...subs] as { id: string | null; name: string }[]).map(sub => {
+            const active = sub.id === activeId;
+            return (
+              <SubPill key={sub.id ?? "all"} label={sub.name} active={active} onClick={() => onSelect(sub.id)} />
+            );
+          })}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function SubPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        flexShrink: 0, padding: "6px 18px", borderRadius: 999,
+        border: `1px solid ${active ? "var(--gold)" : hover ? "var(--forest)" : "var(--line)"}`,
+        background: active ? "var(--gold)" : hover ? "var(--surface-2)" : "transparent",
+        color: active ? "var(--forest)" : hover ? "var(--ink)" : "var(--ink-2)",
+        fontWeight: active ? 700 : 500, fontSize: 13,
+        cursor: "pointer", transition: "all .15s",
+        boxShadow: active ? "0 2px 10px rgba(200,168,75,.3)" : "none",
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -115,13 +161,12 @@ export function useCategoryData(
   pageSize: number,
   mediaType?: number,
 ) {
-  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined); // undefined = loading
+  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined);
   const [items, setItems] = useState<PublicItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // Find category once (non-blocking)
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
@@ -130,22 +175,13 @@ export function useCategoryData(
     return () => ctrl.abort();
   }, [categoryName]);
 
-  // Fetch content — runs as soon as category lookup is done (even if null)
   useEffect(() => {
-    if (category === undefined) return; // still loading categories
+    if (category === undefined) return;
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
     fetchPublicContents(
-      {
-        page,
-        pageSize,
-        // only pass categoryId when category is found
-        categoryId: category?.id,
-        subcategoryId: subId ?? undefined,
-        // always filter by media type so content shows even without a matching category
-        mediaType,
-      },
+      { page, pageSize, categoryId: category?.id, subcategoryId: subId ?? undefined, mediaType },
       ctrl.signal,
     )
       .then(d => { setItems(d.items); setTotalPages(d.totalPages); })
@@ -157,15 +193,9 @@ export function useCategoryData(
   return { category, items, totalPages, loading, error };
 }
 
-/* ─── CategoryScreen component ───────────────────────────── */
+/* ─── CategoryScreen ─────────────────────────────────────── */
 export interface CategoryScreenProps {
-  /** Category name in DB — used to match and filter by categoryId */
   categoryName: string;
-  /**
-   * MediaType numeric value from the backend enum:
-   * 1=Video, 2=Image, 3=Audio, 4=Document, 5=PDF
-   * Always applied so content appears even if the category isn't in the DB yet.
-   */
   mediaType: number;
   icon: string;
   title: string;
@@ -184,8 +214,8 @@ export default function CategoryScreen({
   skeletonRatio = "56.25%",
   renderCard, renderModal,
 }: CategoryScreenProps) {
-  const [page, setPage]   = useState(1);
-  const [subId, setSubId] = useState<string | null>(null);
+  const [page, setPage]     = useState(1);
+  const [subId, setSubId]   = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const { category, items, totalPages, loading, error } = useCategoryData(
@@ -195,6 +225,7 @@ export default function CategoryScreen({
   const handleSub = useCallback((id: string | null) => {
     setSubId(id);
     setPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const handlePage = useCallback((p: number) => {
@@ -204,39 +235,71 @@ export default function CategoryScreen({
 
   const activeItem = items.find(i => i.id === activeId) ?? null;
 
+  /* active sub label for display */
+  const activeSub = subId
+    ? (category?.subcategories.find(s => s.id === subId)?.name ?? null)
+    : null;
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <Header />
 
-      <main style={{ flex: 1 }}>
-        {/* Header bar */}
-        <div style={{ padding: "28px 0 0", borderBottom: "1px solid var(--line)" }}>
-          <div className="cs-container">
-            <h1 style={{
-              fontSize: 26, fontWeight: 800, color: "var(--ink)",
-              fontFamily: "'Noto Kufi Arabic',sans-serif",
-            }}>
-              {icon} {title}
-            </h1>
-            <p style={{ color: "var(--muted)", marginTop: 4, fontSize: 14 }}>{subtitle}</p>
-            <SubcategoryTabs category={category} activeId={subId} onSelect={handleSub} />
+      {/* ── Page header ── */}
+      <div style={{ padding: "28px 0 20px", borderBottom: "1px solid var(--line)" }}>
+        <div className="cs-container">
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", fontFamily: "'Noto Kufi Arabic',sans-serif", margin: 0 }}>
+                {icon} {title}
+              </h1>
+              <p style={{ color: "var(--muted)", marginTop: 5, fontSize: 14 }}>
+                {subtitle}
+                {activeSub && (
+                  <> — <span style={{ color: "var(--forest)", fontWeight: 600 }}>{activeSub}</span></>
+                )}
+              </p>
+            </div>
+            {/* Active filter badge */}
+            {activeSub && (
+              <button onClick={() => handleSub(null)} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 999,
+                border: "1px solid var(--gold)", background: "rgba(200,168,75,.08)",
+                color: "var(--forest)", fontSize: 12, fontWeight: 700, cursor: "pointer",
+              }}>
+                {activeSub} <span style={{ fontSize: 14, lineHeight: 1 }}>×</span>
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Content */}
+      {/* ── Sticky subcategory filter bar ── */}
+      <SubcategoryTabs category={category} activeId={subId} onSelect={handleSub} />
+
+      {/* ── Content ── */}
+      <main style={{ flex: 1 }}>
         <div className="cs-container" style={{ padding: "32px 0 56px" }}>
           {error && (
-            <p style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>
-              حدث خطأ أثناء التحميل — يرجى المحاولة لاحقاً
-            </p>
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <p style={{ color: "var(--muted)", marginBottom: 16 }}>حدث خطأ أثناء التحميل — يرجى المحاولة لاحقاً</p>
+              <button onClick={() => window.location.reload()} style={{ padding: "8px 22px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)", cursor: "pointer", fontSize: 13 }}>
+                إعادة المحاولة
+              </button>
+            </div>
           )}
 
           {loading && <SkeletonGrid count={pageSize} ratio={skeletonRatio} />}
 
           {!loading && !error && items.length === 0 && (
-            <p style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>
-              {emptyMessage}
-            </p>
+            <div style={{ textAlign: "center", padding: 60 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+              <p style={{ color: "var(--muted)", fontSize: 15 }}>{emptyMessage}</p>
+              {subId && (
+                <button onClick={() => handleSub(null)} style={{ marginTop: 16, padding: "8px 22px", borderRadius: 10, border: "1px solid var(--gold)", background: "transparent", color: "var(--forest)", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  عرض جميع المحتويات
+                </button>
+              )}
+            </div>
           )}
 
           {!loading && !error && items.length > 0 && (
