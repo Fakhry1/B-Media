@@ -10,41 +10,70 @@ function fmt(iso: string | null) {
 
 function VideoCard({ item, onClick }: { item: PublicItem; onClick: () => void }) {
   const [hover, setHover] = useState(false);
+  const [dl, setDl] = useState(false);
+
+  async function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDl(true);
+    try {
+      const d = await fetchPublicDetail(item.id);
+      const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("video"));
+      if (!a) return;
+      const s = await fetchSignedUrl(a.id);
+      await downloadBlob(s.url, item.title + ".mp4");
+    } finally { setDl(false); }
+  }
+
   return (
-    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ borderRadius: 20, overflow: "hidden", cursor: "pointer", background: "var(--surface)",
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ borderRadius: 20, overflow: "hidden", background: "var(--surface)",
         border: "1px solid var(--line)", boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
         transform: hover ? "translateY(-2px)" : "none", transition: "all .2s" }}>
-      <div style={{ position: "relative", paddingTop: "56.25%", overflow: "hidden" }}>
-        {item.thumbnailUrl
-          ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          : <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,var(--forest),#0f2d1e)" }} />
-        }
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-          background: hover ? "rgba(0,0,0,.38)" : "rgba(0,0,0,.18)", transition: "background .2s" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%",
-            background: hover ? "var(--gold)" : "rgba(255,255,255,.88)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transform: hover ? "scale(1.12)" : "scale(1)", transition: "all .2s" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill={hover ? "var(--forest)" : "#1a1a1a"}
-              style={{ marginRight: -2 }}><polygon points="5,3 19,12 5,21" /></svg>
+      <div onClick={onClick} style={{ cursor: "pointer" }}>
+        <div style={{ position: "relative", paddingTop: "56.25%", overflow: "hidden" }}>
+          {item.thumbnailUrl
+            ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            : <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,var(--forest),#0f2d1e)" }} />
+          }
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            background: hover ? "rgba(0,0,0,.38)" : "rgba(0,0,0,.18)", transition: "background .2s" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%",
+              background: hover ? "var(--gold)" : "rgba(255,255,255,.88)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: hover ? "scale(1.12)" : "scale(1)", transition: "all .2s" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={hover ? "var(--forest)" : "#1a1a1a"}
+                style={{ marginRight: -2 }}><polygon points="5,3 19,12 5,21" /></svg>
+            </div>
           </div>
+          {item.isFeatured && (
+            <div style={{ position: "absolute", top: 10, right: 10, background: "var(--gold)",
+              color: "var(--forest)", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>مميز</div>
+          )}
         </div>
-        {item.isFeatured && (
-          <div style={{ position: "absolute", top: 10, right: 10, background: "var(--gold)",
-            color: "var(--forest)", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>مميز</div>
-        )}
+        <div style={{ padding: "12px 16px 8px" }}>
+          <h3 style={{ color: "var(--ink)", fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 5,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {item.title}
+          </h3>
+          {item.summary && (
+            <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5, margin: 0,
+              display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {item.summary}
+            </p>
+          )}
+        </div>
       </div>
-      <div style={{ padding: "14px 16px" }}>
-        <h3 style={{ color: "var(--ink)", fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 6,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          {item.title}
-        </h3>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {item.categoryName && <span style={{ fontSize: 12, color: "var(--gold)", fontWeight: 600 }}>{item.categoryName}</span>}
-          {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
-        </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 16px 14px" }}>
+        {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+        <button disabled={dl} onClick={handleDownload}
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8,
+            border: "1px solid var(--line)", background: dl ? "var(--surface-2)" : "transparent",
+            color: dl ? "var(--muted-2)" : "var(--forest)", fontSize: 12, fontWeight: 600,
+            cursor: dl ? "default" : "pointer", transition: "all .15s" }}>
+          {dl ? "⏳" : "⬇"} {dl ? "جارٍ…" : "تحميل"}
+        </button>
       </div>
     </div>
   );

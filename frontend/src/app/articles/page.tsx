@@ -14,15 +14,30 @@ const color = (t: string) => COLORS[t.charCodeAt(0) % COLORS.length];
 /* ─── Card ── */
 function ReadCard({ item, onClick }: { item: PublicItem; onClick: () => void }) {
   const [hover, setHover] = useState(false);
+  const [dl, setDl] = useState(false);
   const c = color(item.title);
+
+  async function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDl(true);
+    try {
+      const d = await fetchPublicDetail(item.id);
+      const a = d.mediaAssets.find(x => ["pdf","document"].some(t => x.mediaType.toLowerCase().includes(t)));
+      if (!a) return;
+      const s = await fetchSignedUrl(a.id);
+      await downloadBlob(s.url, item.title + ".pdf");
+    } finally { setDl(false); }
+  }
+
   return (
-    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ borderRadius: 20, overflow: "hidden", cursor: "pointer", background: "var(--surface)",
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ borderRadius: 20, overflow: "hidden", background: "var(--surface)",
         border: "1px solid var(--line)", display: "flex", flexDirection: "column",
         boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
         transform: hover ? "translateY(-2px)" : "none", transition: "all .2s" }}>
       <div style={{ height: 5, background: `linear-gradient(90deg,${c},${c}66)` }} />
-      <div style={{ padding: "16px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div onClick={onClick} style={{ padding: "14px 18px 10px", flex: 1, display: "flex",
+        flexDirection: "column", gap: 8, cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0,
             background: `${c}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -33,10 +48,6 @@ function ReadCard({ item, onClick }: { item: PublicItem; onClick: () => void }) 
               <polyline points="10 9 9 9 8 9"/>
             </svg>
           </div>
-          {item.categoryName && (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-              background: `${c}18`, color: c }}>{item.categoryName}</span>
-          )}
           {item.isFeatured && (
             <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
               background: "var(--gold)", color: "var(--forest)" }}>مميز</span>
@@ -52,9 +63,17 @@ function ReadCard({ item, onClick }: { item: PublicItem; onClick: () => void }) 
             {item.summary}
           </p>
         )}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: "auto", paddingTop: 4 }}>
-          {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
-        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 18px 14px" }}>
+        {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+        <button disabled={dl} onClick={handleDownload}
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8,
+            border: `1px solid ${dl ? "var(--line)" : c + "44"}`,
+            background: "transparent", color: dl ? "var(--muted-2)" : c, fontSize: 12, fontWeight: 600,
+            cursor: dl ? "default" : "pointer", transition: "all .15s" }}>
+          {dl ? "⏳" : "⬇"} {dl ? "جارٍ…" : "تحميل"}
+        </button>
       </div>
     </div>
   );

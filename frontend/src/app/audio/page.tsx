@@ -14,35 +14,63 @@ const color = (t: string) => COLORS[t.charCodeAt(0) % COLORS.length];
 /* ─── Card ── */
 function AudioCard({ item, onClick }: { item: PublicItem; onClick: () => void }) {
   const [hover, setHover] = useState(false);
+  const [dl, setDl] = useState(false);
   const c = color(item.title);
+
+  async function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDl(true);
+    try {
+      const d = await fetchPublicDetail(item.id);
+      const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("audio"));
+      if (!a) return;
+      const s = await fetchSignedUrl(a.id);
+      await downloadBlob(s.url, item.title + ".mp3");
+    } finally { setDl(false); }
+  }
+
   return (
-    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ borderRadius: 16, cursor: "pointer", background: "var(--surface)",
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ borderRadius: 16, background: "var(--surface)",
         border: "1px solid var(--line)", overflow: "hidden",
         boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
-        transform: hover ? "translateY(-2px)" : "none", transition: "all .2s",
-        display: "flex", alignItems: "center", gap: 16, padding: "16px 18px" }}>
-      <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-        background: `linear-gradient(135deg,${c}33,${c}18)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        border: `2px solid ${c}44` }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
-          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-        </svg>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <h3 style={{ color: "var(--ink)", fontSize: 14, fontWeight: 700, lineHeight: 1.4, marginBottom: 4,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</h3>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {item.categoryName && <span style={{ fontSize: 11, color: c, fontWeight: 600 }}>{item.categoryName}</span>}
-          {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+        transform: hover ? "translateY(-2px)" : "none", transition: "all .2s" }}>
+      <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 16,
+        padding: "14px 18px 10px", cursor: "pointer" }}>
+        <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+          background: `linear-gradient(135deg,${c}33,${c}18)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          border: `2px solid ${c}44` }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ color: "var(--ink)", fontSize: 14, fontWeight: 700, lineHeight: 1.4, marginBottom: 3,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</h3>
+          {item.summary
+            ? <p style={{ color: "var(--muted)", fontSize: 12, margin: 0,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.summary}</p>
+            : item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>
+          }
+        </div>
+        <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+          background: hover ? c : "var(--surface-2)",
+          display: "flex", alignItems: "center", justifyContent: "center", transition: "background .2s" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={hover ? "#fff" : "var(--muted)"}
+            style={{ marginRight: -1 }}><polygon points="5,3 19,12 5,21" /></svg>
         </div>
       </div>
-      <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-        background: hover ? c : "var(--surface-2)",
-        display: "flex", alignItems: "center", justifyContent: "center", transition: "background .2s" }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill={hover ? "#fff" : "var(--muted)"}
-          style={{ marginRight: -1 }}><polygon points="5,3 19,12 5,21" /></svg>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 18px 12px" }}>
+        {item.publishedAt && <span style={{ fontSize: 11, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+        <button disabled={dl} onClick={handleDownload}
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8,
+            border: `1px solid ${dl ? "var(--line)" : c + "44"}`,
+            background: "transparent", color: dl ? "var(--muted-2)" : c, fontSize: 12, fontWeight: 600,
+            cursor: dl ? "default" : "pointer", transition: "all .15s" }}>
+          {dl ? "⏳" : "⬇"} {dl ? "جارٍ…" : "تحميل"}
+        </button>
       </div>
     </div>
   );

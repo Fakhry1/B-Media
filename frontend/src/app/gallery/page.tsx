@@ -11,54 +11,84 @@ function fmt(iso: string | null) {
 /* ─── Card ── */
 function ImageCard({ item, onClick }: { item: PublicItem; onClick: () => void }) {
   const [hover, setHover] = useState(false);
+  const [dl, setDl] = useState(false);
   const COLORS = ["#3B82F6","#8B5CF6","#10B981","#F59E0B","#EC4899","#06B6D4"];
   const c = COLORS[item.title.charCodeAt(0) % COLORS.length];
+
+  async function handleDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDl(true);
+    try {
+      const d = await fetchPublicDetail(item.id);
+      const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image") && x.isPrimary)
+        ?? d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image"));
+      if (!a) return;
+      const s = await fetchSignedUrl(a.id);
+      await downloadBlob(s.url, item.title + ".jpg");
+    } finally { setDl(false); }
+  }
+
   return (
-    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer", background: "var(--surface)",
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ borderRadius: 16, overflow: "hidden", background: "var(--surface)",
         border: "1px solid var(--line)",
         boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
         transform: hover ? "translateY(-2px) scale(1.01)" : "none", transition: "all .2s" }}>
-      <div style={{ position: "relative", paddingTop: "75%", overflow: "hidden" }}>
-        {item.thumbnailUrl
-          ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-                transform: hover ? "scale(1.06)" : "scale(1)", transition: "transform .3s" }} />
-          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
-              justifyContent: "center", background: `linear-gradient(135deg,${c}22,${c}44)` }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <path d="M21 15l-5-5L5 21"/>
-              </svg>
-            </div>
-        }
-        {hover && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.38)",
-            display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ background: "rgba(255,255,255,.9)", borderRadius: "50%", width: 44, height: 44,
+      <div onClick={onClick} style={{ cursor: "pointer" }}>
+        <div style={{ position: "relative", paddingTop: "75%", overflow: "hidden" }}>
+          {item.thumbnailUrl
+            ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+                  transform: hover ? "scale(1.06)" : "scale(1)", transition: "transform .3s" }} />
+            : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
+                justifyContent: "center", background: `linear-gradient(135deg,${c}22,${c}44)` }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+          }
+          {hover && (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.38)",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
-              </svg>
+              <div style={{ background: "rgba(255,255,255,.9)", borderRadius: "50%", width: 44, height: 44,
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+              </div>
             </div>
-          </div>
-        )}
-        {item.isFeatured && (
-          <div style={{ position: "absolute", top: 8, right: 8, background: "var(--gold)",
-            color: "var(--forest)", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>مميز</div>
-        )}
-      </div>
-      <div style={{ padding: "12px 14px" }}>
-        <h3 style={{ color: "var(--ink)", fontSize: 13, fontWeight: 700, lineHeight: 1.4, marginBottom: 4,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          {item.title}
-        </h3>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {item.categoryName && <span style={{ fontSize: 11, color: c, fontWeight: 600 }}>{item.categoryName}</span>}
-          {item.publishedAt && <span style={{ fontSize: 10, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+          )}
+          {item.isFeatured && (
+            <div style={{ position: "absolute", top: 8, right: 8, background: "var(--gold)",
+              color: "var(--forest)", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>مميز</div>
+          )}
         </div>
+        <div style={{ padding: "10px 14px 6px" }}>
+          <h3 style={{ color: "var(--ink)", fontSize: 13, fontWeight: 700, lineHeight: 1.4, marginBottom: 3,
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {item.title}
+          </h3>
+          {item.summary && (
+            <p style={{ color: "var(--muted)", fontSize: 11, lineHeight: 1.4, margin: 0,
+              display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {item.summary}
+            </p>
+          )}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "6px 14px 12px" }}>
+        {item.publishedAt && <span style={{ fontSize: 10, color: "var(--muted-2)" }}>{fmt(item.publishedAt)}</span>}
+        <button disabled={dl} onClick={handleDownload}
+          style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 8,
+            border: `1px solid ${dl ? "var(--line)" : c + "44"}`,
+            background: "transparent", color: dl ? "var(--muted-2)" : c, fontSize: 11, fontWeight: 600,
+            cursor: dl ? "default" : "pointer", transition: "all .15s" }}>
+          {dl ? "⏳" : "⬇"} {dl ? "جارٍ…" : "تحميل"}
+        </button>
       </div>
     </div>
   );
