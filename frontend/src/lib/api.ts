@@ -6,6 +6,13 @@ export class ApiError extends Error {
   }
 }
 
+function clearAuthToken() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("bmedia_token");
+  localStorage.removeItem("bmedia_refresh_token");
+  localStorage.removeItem("bmedia_user");
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
@@ -28,6 +35,13 @@ export async function apiFetch<T>(
       const json = JSON.parse(text);
       message = json.detail ?? json.title ?? json.message ?? text;
     } catch {}
+
+    // Token expired or invalid — clear it so future requests don't keep sending it
+    if (res.status === 401 && token) {
+      clearAuthToken();
+      if (typeof window !== "undefined") window.location.href = "/login";
+    }
+
     throw new ApiError(res.status, message || `HTTP ${res.status}`);
   }
 

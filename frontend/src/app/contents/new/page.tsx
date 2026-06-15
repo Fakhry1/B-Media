@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import { createContent, uploadAsset, guessMediaType } from "@/lib/contents";
-import { getCategories, type CategoryDto } from "@/lib/categories";
+import { fetchPublicCategories, type PubCategory } from "@/lib/public";
 import { ApiError } from "@/lib/api";
 import { useLang } from "@/lib/LangContext";
+import { isLoggedIn } from "@/lib/auth";
 
 const LANGS = [
   { code: "ar", label: "العربية" }, { code: "en", label: "English" },
@@ -147,7 +148,7 @@ export default function NewContentPage() {
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categories, setCategories] = useState<PubCategory[]>([]);
   const [step1Error, setStep1Error] = useState("");
   const [creating, setCreating]     = useState(false);
   const [contentId, setContentId]   = useState("");
@@ -157,7 +158,10 @@ export default function NewContentPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { getCategories(true).then(setCategories).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!isLoggedIn()) { router.replace("/login"); return; }
+    fetchPublicCategories().then(setCategories).catch(() => {});
+  }, [router]);
 
   const selectedCat = categories.find(c => c.id === categoryId);
   const isAr = lang === "ar";

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getContents, STATUS_LABEL_AR, STATUS_LABEL_EN, STATUS_COLOR, type ContentListItem, type ContentStatus } from "@/lib/contents";
 import { useLang } from "@/lib/LangContext";
+import { isLoggedIn } from "@/lib/auth";
 
 const STATUSES: ContentStatus[] = [
   "Draft","ContentReview","LanguageReview","MediaQualityReview","FinalApproval","Published","Rejected","Scheduled","Archived",
@@ -28,6 +30,12 @@ function formatDate(d: string) {
 
 export default function ContentsPage() {
   const { lang, t } = useLang();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoggedIn()) router.replace("/login");
+  }, [router]);
+
   const [items, setItems] = useState<ContentListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
