@@ -67,37 +67,22 @@ export function SkeletonGrid({ count, ratio = "56.25%" }: { count: number; ratio
   );
 }
 
-/* ─── Filter Pill ────────────────────────────────────────── */
-function Pill({
-  label, active, onClick, variant = "default",
-}: {
-  label: string; active: boolean; onClick: () => void; variant?: "default" | "sub";
-}) {
+/* ─── Subcategory filter pill ────────────────────────────── */
+function SubPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   const [hover, setHover] = useState(false);
-  const isActive = active;
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        flexShrink: 0,
-        padding: variant === "sub" ? "4px 14px" : "7px 20px",
-        borderRadius: 999,
-        border: `1px solid ${isActive ? "var(--gold)" : hover ? "var(--forest)" : "var(--line)"}`,
-        background: isActive
-          ? "var(--gold)"
-          : hover
-          ? "var(--surface-2)"
-          : variant === "sub"
-          ? "transparent"
-          : "transparent",
-        color: isActive ? "var(--forest)" : hover ? "var(--ink)" : "var(--ink-2)",
-        fontWeight: isActive ? 700 : 500,
-        fontSize: variant === "sub" ? 12 : 13,
-        cursor: "pointer",
-        transition: "all .15s",
-        boxShadow: isActive ? "0 2px 10px rgba(200,168,75,.28)" : "none",
+        flexShrink: 0, padding: "7px 20px", borderRadius: 999,
+        border: `1px solid ${active ? "var(--gold)" : hover ? "var(--forest)" : "var(--line)"}`,
+        background: active ? "var(--gold)" : hover ? "var(--surface-2)" : "transparent",
+        color: active ? "var(--forest)" : hover ? "var(--ink)" : "var(--ink-2)",
+        fontWeight: active ? 700 : 500, fontSize: 13,
+        cursor: "pointer", transition: "all .15s",
+        boxShadow: active ? "0 2px 10px rgba(200,168,75,.28)" : "none",
       }}
     >
       {label}
@@ -105,42 +90,37 @@ function Pill({
   );
 }
 
-/* ─── Two-level filter bar ───────────────────────────────── */
-interface FilterBarProps {
-  categories: PubCategory[];
-  loadingCats: boolean;
-  activeCatId: string | null;
+/* ─── Subcategory filter bar ─────────────────────────────── */
+/*
+ * category === undefined  → still loading  → show skeleton
+ * category === null       → not found in DB → hide bar (content still loads by mediaType)
+ * subs.length === 0       → no subs        → hide bar
+ * subs.length > 0         → show filter pills
+ */
+function SubcategoryBar({
+  category, activeSubId, onSelect,
+}: {
+  category: PubCategory | null | undefined;
   activeSubId: string | null;
-  onCatSelect: (id: string | null) => void;
-  onSubSelect: (id: string | null) => void;
-}
-
-function FilterBar({
-  categories, loadingCats,
-  activeCatId, activeSubId,
-  onCatSelect, onSubSelect,
-}: FilterBarProps) {
-  const activeCat = categories.find(c => c.id === activeCatId) ?? null;
-  const subs = activeCat?.subcategories ?? [];
+  onSelect: (id: string | null) => void;
+}) {
+  const subs = category?.subcategories ?? [];
 
   const barStyle: React.CSSProperties = {
-    position: "sticky",
-    top: 65,
-    zIndex: 40,
+    position: "sticky", top: 65, zIndex: 40,
     background: "color-mix(in srgb,var(--bg) 94%,transparent)",
     backdropFilter: "blur(14px)",
     WebkitBackdropFilter: "blur(14px)",
     borderBottom: "1px solid var(--line)",
   };
 
-  /* Skeleton while loading */
-  if (loadingCats) {
+  if (category === undefined) {
     return (
       <div style={barStyle}>
         <div className="cs-container">
           <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0" }}>
-            <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>التصنيفات:</span>
-            {[90, 70, 110, 80, 100, 75].map((w, i) => (
+            <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>تصفية:</span>
+            {[90, 70, 110, 80, 100].map((w, i) => (
               <div key={i} className="animate-pulse" style={{ flexShrink: 0, height: 34, width: w, borderRadius: 999, background: "var(--surface-2)" }} />
             ))}
           </div>
@@ -149,68 +129,50 @@ function FilterBar({
     );
   }
 
-  /* No categories at all */
-  if (categories.length === 0) return null;
+  if (!category || subs.length === 0) return null;
 
   return (
     <div style={barStyle}>
       <div className="cs-container">
-        {/* Level 1 — categories */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0 8px", overflowX: "auto", scrollbarWidth: "none" }}>
-          <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>التصنيف:</span>
-          <Pill label="الكل" active={activeCatId === null} onClick={() => onCatSelect(null)} />
-          {categories.map(cat => (
-            <Pill key={cat.id} label={cat.name} active={cat.id === activeCatId} onClick={() => onCatSelect(cat.id)} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0", overflowX: "auto", scrollbarWidth: "none" }}>
+          <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>تصفية:</span>
+          <SubPill label="الكل" active={activeSubId === null} onClick={() => onSelect(null)} />
+          {subs.map(sub => (
+            <SubPill key={sub.id} label={sub.name} active={sub.id === activeSubId} onClick={() => onSelect(sub.id)} />
           ))}
         </div>
-
-        {/* Level 2 — subcategories (only when a category with subs is selected) */}
-        {activeCatId && subs.length > 0 && (
-          <div style={{
-            display: "flex", gap: 6, alignItems: "center",
-            padding: "0 0 9px", overflowX: "auto", scrollbarWidth: "none",
-            borderTop: "1px dashed var(--line)", paddingTop: 8,
-            animation: "fadeIn .2s ease",
-          }}>
-            <span style={{ fontSize: 11, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>فرعي:</span>
-            <Pill label="الكل" active={activeSubId === null} onClick={() => onSubSelect(null)} variant="sub" />
-            {subs.map(sub => (
-              <Pill key={sub.id} label={sub.name} active={sub.id === activeSubId} onClick={() => onSubSelect(sub.id)} variant="sub" />
-            ))}
-          </div>
-        )}
       </div>
-      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}`}</style>
     </div>
   );
 }
 
 /* ─── Main hook ──────────────────────────────────────────── */
 export function useCategoryData(
+  categoryName: string,
   page: number,
-  catId: string | null,
   subId: string | null,
   pageSize: number,
   mediaType: number,
 ) {
-  const [categories, setCategories] = useState<PubCategory[]>([]);
-  const [loadingCats, setLoadingCats] = useState(true);
+  // undefined = still loading, null = not found in DB
+  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined);
   const [items, setItems] = useState<PublicItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  /* Fetch all categories once */
+  /* Resolve the category by name once */
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => { setCategories(cats); setLoadingCats(false); })
-      .catch(e => { if (e.name !== "AbortError") setLoadingCats(false); });
+      .then(cats => setCategory(cats.find(c => c.name === categoryName) ?? null))
+      .catch(e => { if (e.name !== "AbortError") setCategory(null); });
     return () => ctrl.abort();
-  }, []);
+  }, [categoryName]);
 
-  /* Fetch content — always filtered by mediaType */
+  /* Fetch content: always by mediaType, also by categoryId when found */
   useEffect(() => {
+    if (category === undefined) return; // wait for category lookup
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
@@ -219,7 +181,7 @@ export function useCategoryData(
         page,
         pageSize,
         mediaType,
-        categoryId: catId ?? undefined,
+        categoryId: category?.id,         // scoped to this category when found
         subcategoryId: subId ?? undefined,
       },
       ctrl.signal,
@@ -228,13 +190,16 @@ export function useCategoryData(
       .catch(e => { if (e.name !== "AbortError") setError(true); })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
-  }, [page, catId, subId, pageSize, mediaType]);
+  }, [category, page, subId, pageSize, mediaType]);
 
-  return { categories, loadingCats, items, totalPages, loading, error };
+  return { category, items, totalPages, loading, error };
 }
 
 /* ─── CategoryScreen ─────────────────────────────────────── */
 export interface CategoryScreenProps {
+  /** Must match the category name exactly as stored in the DB */
+  categoryName: string;
+  /** 1=Video 2=Image 3=Audio 4=Document 5=PDF */
   mediaType: number;
   icon: string;
   title: string;
@@ -248,26 +213,18 @@ export interface CategoryScreenProps {
 }
 
 export default function CategoryScreen({
-  mediaType, icon, title, subtitle, emptyMessage,
+  categoryName, mediaType, icon, title, subtitle, emptyMessage,
   pageSize = 12, gridCols = "repeat(3,1fr)",
   skeletonRatio = "56.25%",
   renderCard, renderModal,
 }: CategoryScreenProps) {
-  const [page, setPage]       = useState(1);
-  const [catId, setCatId]     = useState<string | null>(null);
-  const [subId, setSubId]     = useState<string | null>(null);
+  const [page, setPage]         = useState(1);
+  const [subId, setSubId]       = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const { categories, loadingCats, items, totalPages, loading, error } = useCategoryData(
-    page, catId, subId, pageSize, mediaType,
+  const { category, items, totalPages, loading, error } = useCategoryData(
+    categoryName, page, subId, pageSize, mediaType,
   );
-
-  const handleCat = useCallback((id: string | null) => {
-    setCatId(id);
-    setSubId(null);
-    setPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
 
   const handleSub = useCallback((id: string | null) => {
     setSubId(id);
@@ -280,9 +237,7 @@ export default function CategoryScreen({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  /* Active labels for breadcrumb */
-  const activeCat = categories.find(c => c.id === catId) ?? null;
-  const activeSub = activeCat?.subcategories.find(s => s.id === subId) ?? null;
+  const activeSub = category?.subcategories.find(s => s.id === subId) ?? null;
   const activeItem = items.find(i => i.id === activeId) ?? null;
 
   return (
@@ -297,15 +252,8 @@ export default function CategoryScreen({
               <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--ink)", fontFamily: "'Noto Kufi Arabic',sans-serif", margin: 0 }}>
                 {icon} {title}
               </h1>
-              {/* Breadcrumb */}
               <p style={{ color: "var(--muted)", marginTop: 5, fontSize: 14, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 {subtitle}
-                {activeCat && (
-                  <>
-                    <span style={{ color: "var(--line)" }}>›</span>
-                    <span style={{ color: "var(--forest)", fontWeight: 600 }}>{activeCat.name}</span>
-                  </>
-                )}
                 {activeSub && (
                   <>
                     <span style={{ color: "var(--line)" }}>›</span>
@@ -315,44 +263,23 @@ export default function CategoryScreen({
               </p>
             </div>
 
-            {/* Active filter badges */}
-            {(catId || subId) && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {subId && activeSub && (
-                  <button onClick={() => handleSub(null)} style={{
-                    display: "flex", alignItems: "center", gap: 5, padding: "5px 12px",
-                    borderRadius: 999, border: "1px solid var(--gold)",
-                    background: "rgba(200,168,75,.08)", color: "var(--gold)",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  }}>
-                    {activeSub.name} <span>×</span>
-                  </button>
-                )}
-                {catId && activeCat && (
-                  <button onClick={() => handleCat(null)} style={{
-                    display: "flex", alignItems: "center", gap: 5, padding: "5px 12px",
-                    borderRadius: 999, border: "1px solid var(--forest)",
-                    background: "rgba(21,128,61,.06)", color: "var(--forest)",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  }}>
-                    {activeCat.name} <span>×</span>
-                  </button>
-                )}
-              </div>
+            {/* Active subcategory badge */}
+            {subId && activeSub && (
+              <button onClick={() => handleSub(null)} style={{
+                display: "flex", alignItems: "center", gap: 5, padding: "5px 14px",
+                borderRadius: 999, border: "1px solid var(--gold)",
+                background: "rgba(200,168,75,.08)", color: "var(--gold)",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+              }}>
+                {activeSub.name} <span>×</span>
+              </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Sticky two-level filter bar */}
-      <FilterBar
-        categories={categories}
-        loadingCats={loadingCats}
-        activeCatId={catId}
-        activeSubId={subId}
-        onCatSelect={handleCat}
-        onSubSelect={handleSub}
-      />
+      {/* Sticky subcategory filter bar */}
+      <SubcategoryBar category={category} activeSubId={subId} onSelect={handleSub} />
 
       {/* Content */}
       <main style={{ flex: 1 }}>
@@ -376,8 +303,8 @@ export default function CategoryScreen({
             <div style={{ textAlign: "center", padding: 60 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
               <p style={{ color: "var(--muted)", fontSize: 15 }}>{emptyMessage}</p>
-              {(catId || subId) && (
-                <button onClick={() => handleCat(null)} style={{
+              {subId && (
+                <button onClick={() => handleSub(null)} style={{
                   marginTop: 16, padding: "8px 22px", borderRadius: 10,
                   border: "1px solid var(--gold)", background: "transparent",
                   color: "var(--forest)", cursor: "pointer", fontSize: 13, fontWeight: 600,

@@ -123,6 +123,7 @@ function VideoModal({ item, onClose }: { item: PublicItem; onClose: () => void }
 export default function VideoPage() {
   return (
     <CategoryScreen
+      categoryName="المشاهدة"
       mediaType={1}
       icon="🎬"
       title="المشاهدة"

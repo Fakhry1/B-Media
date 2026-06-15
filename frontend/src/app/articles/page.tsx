@@ -139,6 +139,7 @@ function ReadModal({ item, onClose }: { item: PublicItem; onClose: () => void })
 export default function ArticlesPage() {
   return (
     <CategoryScreen
+      categoryName="الاطلاع"
       mediaType={5}
       icon="📖"
       title="الاطلاع"
