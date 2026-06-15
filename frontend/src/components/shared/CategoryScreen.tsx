@@ -90,21 +90,23 @@ function SubPill({ label, active, onClick }: { label: string; active: boolean; o
   );
 }
 
-/* ─── Subcategory filter bar ─────────────────────────────── */
+/* ─── Two-level filter bar ───────────────────────────────── */
 /*
- * Tiers (in priority order):
- *  1. category === undefined          → show skeleton (still loading)
- *  2. category found + has subs       → show those subs as filters
- *  3. category not found / no subs    → flatten ALL categories' subs as fallback
- *  4. no subcategories anywhere       → hide bar entirely
+ * Level 1 (always): All categories from API
+ * Level 2 (when a cat is selected): its subcategories
+ * No name-matching required — works regardless of DB category names
  */
-function SubcategoryBar({
-  category, allCategories, activeSubId, onSelect,
+function FilterBar({
+  allCategories, loadingCats,
+  activeCatId, activeSubId,
+  onCatSelect, onSubSelect,
 }: {
-  category: PubCategory | null | undefined;
   allCategories: PubCategory[];
+  loadingCats: boolean;
+  activeCatId: string | null;
   activeSubId: string | null;
-  onSelect: (id: string | null) => void;
+  onCatSelect: (id: string | null) => void;
+  onSubSelect: (id: string | null) => void;
 }) {
   const barStyle: React.CSSProperties = {
     position: "sticky", top: 65, zIndex: 40,
@@ -114,14 +116,13 @@ function SubcategoryBar({
     borderBottom: "1px solid var(--line)",
   };
 
-  /* Still loading */
-  if (category === undefined) {
+  if (loadingCats) {
     return (
       <div style={barStyle}>
         <div className="cs-container">
           <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0" }}>
-            <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>تصفية:</span>
-            {[90, 70, 110, 80, 100].map((w, i) => (
+            <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>التصنيف:</span>
+            {[90, 110, 80, 130, 75, 100].map((w, i) => (
               <div key={i} className="animate-pulse" style={{ flexShrink: 0, height: 34, width: w, borderRadius: 999, background: "var(--surface-2)" }} />
             ))}
           </div>
@@ -130,88 +131,88 @@ function SubcategoryBar({
     );
   }
 
-  /* Prefer the matched category's own subs only */
-  const subs = category?.subcategories ?? [];
+  if (allCategories.length === 0) return null;
 
-  if (subs.length === 0) return null;
+  const activeCat = allCategories.find(c => c.id === activeCatId) ?? null;
+  const subs = activeCat?.subcategories ?? [];
 
   return (
     <div style={barStyle}>
       <div className="cs-container">
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0", overflowX: "auto", scrollbarWidth: "none" }}>
-          <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>تصفية:</span>
-          <SubPill label="الكل" active={activeSubId === null} onClick={() => onSelect(null)} />
-          {subs.map(sub => (
-            <SubPill key={sub.id} label={sub.name} active={sub.id === activeSubId} onClick={() => onSelect(sub.id)} />
+        {/* Level 1 — all categories */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0 8px", overflowX: "auto", scrollbarWidth: "none" }}>
+          <span style={{ fontSize: 12, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>التصنيف:</span>
+          <SubPill label="الكل" active={activeCatId === null} onClick={() => onCatSelect(null)} />
+          {allCategories.map(cat => (
+            <SubPill key={cat.id} label={cat.name} active={cat.id === activeCatId} onClick={() => onCatSelect(cat.id)} />
           ))}
         </div>
+
+        {/* Level 2 — subcategories of selected category */}
+        {activeCatId && subs.length > 0 && (
+          <div style={{
+            display: "flex", gap: 6, alignItems: "center",
+            padding: "7px 0 9px", overflowX: "auto", scrollbarWidth: "none",
+            borderTop: "1px dashed var(--line)",
+            animation: "fadeIn .2s ease",
+          }}>
+            <span style={{ fontSize: 11, color: "var(--muted-2)", fontWeight: 600, flexShrink: 0 }}>فرعي:</span>
+            <SubPill label="الكل" active={activeSubId === null} onClick={() => onSubSelect(null)} />
+            {subs.map(sub => (
+              <SubPill key={sub.id} label={sub.name} active={sub.id === activeSubId} onClick={() => onSubSelect(sub.id)} />
+            ))}
+          </div>
+        )}
       </div>
+      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}`}</style>
     </div>
   );
 }
 
 /* ─── Main hook ──────────────────────────────────────────── */
 export function useCategoryData(
-  categoryName: string,
   page: number,
+  catId: string | null,
   subId: string | null,
   pageSize: number,
   mediaType: number,
 ) {
-  // undefined = still loading, null = not found in DB
-  const [category, setCategory]       = useState<PubCategory | null | undefined>(undefined);
-  const [allCategories, setAllCats]   = useState<PubCategory[]>([]);
-  const [items, setItems]             = useState<PublicItem[]>([]);
-  const [totalPages, setTotalPages]   = useState(1);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState(false);
+  const [allCategories, setAllCats] = useState<PubCategory[]>([]);
+  const [loadingCats, setLoadingCats] = useState(true);
+  const [items, setItems]           = useState<PublicItem[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(false);
 
-  /* Resolve category by name (exact → case-insensitive → null) */
+  /* Fetch all categories once */
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => {
-        setAllCats(cats);
-        const norm = (s: string) => s.trim().toLowerCase();
-        const found =
-          cats.find(c => c.name === categoryName) ??
-          cats.find(c => norm(c.name) === norm(categoryName)) ??
-          null;
-        setCategory(found);
-      })
-      .catch(e => { if (e.name !== "AbortError") { setCategory(null); } });
+      .then(cats => { setAllCats(cats); setLoadingCats(false); })
+      .catch(e => { if (e.name !== "AbortError") setLoadingCats(false); });
     return () => ctrl.abort();
-  }, [categoryName]);
+  }, []);
 
-  /* Fetch content: always by mediaType, also by categoryId when found */
+  /* Fetch content: always by mediaType + optional category/subcategory */
   useEffect(() => {
-    if (category === undefined) return;
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
     fetchPublicContents(
-      {
-        page,
-        pageSize,
-        mediaType,
-        categoryId: category?.id,
-        subcategoryId: subId ?? undefined,
-      },
+      { page, pageSize, mediaType, categoryId: catId ?? undefined, subcategoryId: subId ?? undefined },
       ctrl.signal,
     )
       .then(d => { setItems(d.items); setTotalPages(d.totalPages); })
       .catch(e => { if (e.name !== "AbortError") setError(true); })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
-  }, [category, page, subId, pageSize, mediaType]);
+  }, [page, catId, subId, pageSize, mediaType]);
 
-  return { category, allCategories, items, totalPages, loading, error };
+  return { allCategories, loadingCats, items, totalPages, loading, error };
 }
 
 /* ─── CategoryScreen ─────────────────────────────────────── */
 export interface CategoryScreenProps {
-  /** Must match the category name exactly as stored in the DB */
-  categoryName: string;
   /** 1=Video 2=Image 3=Audio 4=Document 5=PDF */
   mediaType: number;
   icon: string;
@@ -226,18 +227,26 @@ export interface CategoryScreenProps {
 }
 
 export default function CategoryScreen({
-  categoryName, mediaType, icon, title, subtitle, emptyMessage,
+  mediaType, icon, title, subtitle, emptyMessage,
   pageSize = 12, gridCols = "repeat(3,1fr)",
   skeletonRatio = "56.25%",
   renderCard, renderModal,
 }: CategoryScreenProps) {
   const [page, setPage]         = useState(1);
+  const [catId, setCatId]       = useState<string | null>(null);
   const [subId, setSubId]       = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const { category, allCategories, items, totalPages, loading, error } = useCategoryData(
-    categoryName, page, subId, pageSize, mediaType,
+  const { allCategories, loadingCats, items, totalPages, loading, error } = useCategoryData(
+    page, catId, subId, pageSize, mediaType,
   );
+
+  const handleCat = useCallback((id: string | null) => {
+    setCatId(id);
+    setSubId(null);
+    setPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const handleSub = useCallback((id: string | null) => {
     setSubId(id);
@@ -250,9 +259,8 @@ export default function CategoryScreen({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const activeSub = subId
-    ? (category?.subcategories.find(s => s.id === subId) ?? null)
-    : null;
+  const activeCat = allCategories.find(c => c.id === catId) ?? null;
+  const activeSub = activeCat?.subcategories.find(s => s.id === subId) ?? null;
   const activeItem = items.find(i => i.id === activeId) ?? null;
 
   return (
@@ -269,32 +277,37 @@ export default function CategoryScreen({
               </h1>
               <p style={{ color: "var(--muted)", marginTop: 5, fontSize: 14, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 {subtitle}
-                {activeSub && (
-                  <>
-                    <span style={{ color: "var(--line)" }}>›</span>
-                    <span style={{ color: "var(--gold)", fontWeight: 600 }}>{activeSub.name}</span>
-                  </>
-                )}
+                {activeCat && <><span style={{ color: "var(--line)" }}>›</span><span style={{ color: "var(--forest)", fontWeight: 600 }}>{activeCat.name}</span></>}
+                {activeSub && <><span style={{ color: "var(--line)" }}>›</span><span style={{ color: "var(--gold)", fontWeight: 600 }}>{activeSub.name}</span></>}
               </p>
             </div>
 
-            {/* Active subcategory badge */}
-            {subId && activeSub && (
-              <button onClick={() => handleSub(null)} style={{
-                display: "flex", alignItems: "center", gap: 5, padding: "5px 14px",
-                borderRadius: 999, border: "1px solid var(--gold)",
-                background: "rgba(200,168,75,.08)", color: "var(--gold)",
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
-              }}>
-                {activeSub.name} <span>×</span>
-              </button>
-            )}
+            {/* Active filter badges */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {activeSub && (
+                <button onClick={() => handleSub(null)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, border: "1px solid var(--gold)", background: "rgba(200,168,75,.08)", color: "var(--gold)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {activeSub.name} <span>×</span>
+                </button>
+              )}
+              {activeCat && (
+                <button onClick={() => handleCat(null)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, border: "1px solid var(--forest)", background: "rgba(21,128,61,.06)", color: "var(--forest)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {activeCat.name} <span>×</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sticky subcategory filter bar */}
-      <SubcategoryBar category={category} allCategories={allCategories} activeSubId={subId} onSelect={handleSub} />
+      {/* Sticky two-level filter bar */}
+      <FilterBar
+        allCategories={allCategories}
+        loadingCats={loadingCats}
+        activeCatId={catId}
+        activeSubId={subId}
+        onCatSelect={handleCat}
+        onSubSelect={handleSub}
+      />
 
       {/* Content */}
       <main style={{ flex: 1 }}>
@@ -318,8 +331,8 @@ export default function CategoryScreen({
             <div style={{ textAlign: "center", padding: 60 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
               <p style={{ color: "var(--muted)", fontSize: 15 }}>{emptyMessage}</p>
-              {subId && (
-                <button onClick={() => handleSub(null)} style={{
+              {(catId || subId) && (
+                <button onClick={() => handleCat(null)} style={{
                   marginTop: 16, padding: "8px 22px", borderRadius: 10,
                   border: "1px solid var(--gold)", background: "transparent",
                   color: "var(--forest)", cursor: "pointer", fontSize: 13, fontWeight: 600,
