@@ -161,7 +161,7 @@ function ContentCard({ item, mediaType, href }: { item: PublicItem; mediaType: n
           color: "var(--ink)", fontSize: 16, fontWeight: 700, lineHeight: 1.45,
           margin: "0 0 7px",
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-          textDecoration: h ? "underline" : "none", textDecorationColor: "var(--gold)",
+          textDecorationLine: h ? "underline" : "none", textDecorationColor: "var(--gold)",
           textUnderlineOffset: 3,
         }}>
           {item.title}
