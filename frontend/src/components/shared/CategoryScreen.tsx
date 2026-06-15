@@ -171,44 +171,49 @@ function FilterBar({
 
 /* ─── Main hook ──────────────────────────────────────────── */
 export function useCategoryData(
+  categoryName: string,
   page: number,
-  catId: string | null,
   subId: string | null,
   pageSize: number,
   mediaType: number,
 ) {
-  const [allCategories, setAllCats] = useState<PubCategory[]>([]);
-  const [loadingCats, setLoadingCats] = useState(true);
-  const [items, setItems]           = useState<PublicItem[]>([]);
+  // undefined = still loading, null = not found
+  const [category, setCategory] = useState<PubCategory | null | undefined>(undefined);
+  const [items, setItems]       = useState<PublicItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(false);
 
-  /* Fetch all categories once */
+  /* Find this screen's category by exact name */
   useEffect(() => {
     const ctrl = new AbortController();
     fetchPublicCategories(ctrl.signal)
-      .then(cats => { setAllCats(cats); setLoadingCats(false); })
-      .catch(e => { if (e.name !== "AbortError") setLoadingCats(false); });
+      .then(cats => setCategory(cats.find(c => c.name === categoryName) ?? null))
+      .catch(e => { if (e.name !== "AbortError") setCategory(null); });
     return () => ctrl.abort();
-  }, []);
+  }, [categoryName]);
 
-  /* Fetch content: always by mediaType + optional category/subcategory */
+  /* Fetch content once category lookup finishes */
   useEffect(() => {
+    if (category === undefined) return;
     const ctrl = new AbortController();
     setLoading(true);
     setError(false);
     fetchPublicContents(
-      { page, pageSize, mediaType, categoryId: catId ?? undefined, subcategoryId: subId ?? undefined },
+      {
+        page, pageSize, mediaType,
+        categoryId: category?.id,
+        subcategoryId: subId ?? undefined,
+      },
       ctrl.signal,
     )
       .then(d => { setItems(d.items); setTotalPages(d.totalPages); })
       .catch(e => { if (e.name !== "AbortError") setError(true); })
       .finally(() => setLoading(false));
     return () => ctrl.abort();
-  }, [page, catId, subId, pageSize, mediaType]);
+  }, [category, page, subId, pageSize, mediaType]);
 
-  return { allCategories, loadingCats, items, totalPages, loading, error };
+  return { category, items, totalPages, loading, error };
 }
 
 /* ─── CategoryScreen ─────────────────────────────────────── */
