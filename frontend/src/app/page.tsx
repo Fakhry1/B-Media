@@ -82,7 +82,8 @@ function HeroSlider() {
 
   return (
     <div
-      style={{ position: "relative", height: 520, overflow: "hidden", userSelect: "none" }}
+      className="hero-slider"
+      style={{ position: "relative", overflow: "hidden", userSelect: "none" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -102,19 +103,19 @@ function HeroSlider() {
 
       {/* Content */}
       <div style={{ position: "absolute", inset: 0, zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "0 32px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", padding: "0 20px" }}>
           <div style={{ maxWidth: 580 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${slide.accent}22`, border: `1px solid ${slide.accent}55`, color: slide.accent, fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 20, marginBottom: 18 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${slide.accent}22`, border: `1px solid ${slide.accent}55`, color: slide.accent, fontSize: 12, fontWeight: 700, padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
               <span>{slide.icon}</span> {slide.tag}
             </div>
             <h1 style={{
-              color: "#fff", fontSize: "clamp(24px,4vw,42px)", fontWeight: 800, lineHeight: 1.3,
-              margin: "0 0 16px", fontFamily: "'Noto Kufi Arabic',sans-serif",
+              color: "#fff", fontSize: "clamp(20px,4vw,42px)", fontWeight: 800, lineHeight: 1.3,
+              margin: "0 0 12px", fontFamily: "'Noto Kufi Arabic',sans-serif",
               textShadow: "0 2px 16px rgba(0,0,0,.5)",
             }}>
               {slide.title}
             </h1>
-            <p style={{ color: "rgba(255,255,255,.72)", fontSize: 16, lineHeight: 1.7, marginBottom: 28, maxWidth: 480 }}>
+            <p className="slide-desc" style={{ color: "rgba(255,255,255,.72)", fontSize: 15, lineHeight: 1.7, marginBottom: 22, maxWidth: 480 }}>
               {slide.desc}
             </p>
             <SlideBtn href={slide.href} label={slide.cta} color={slide.accent} />
@@ -150,6 +151,9 @@ function HeroSlider() {
 
       <style>{`
         @keyframes progress { from { width: 0% } to { width: 100% } }
+        .hero-slider { height: 520px; }
+        @media (max-width: 768px) { .hero-slider { height: 380px; } .slide-desc { display: none; } }
+        @media (max-width: 480px) { .hero-slider { height: 300px; } }
       `}</style>
     </div>
   );
@@ -379,7 +383,7 @@ export default function HomePage() {
       <style>{`
         .ql-grid { display: grid; gap: 16px; grid-template-columns: repeat(4,1fr); }
         @media (max-width: 900px) { .ql-grid { grid-template-columns: repeat(2,1fr); } }
-        @media (max-width: 480px) { .ql-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 400px) { .ql-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
   );

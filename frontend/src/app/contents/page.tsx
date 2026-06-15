@@ -137,8 +137,8 @@ export default function ContentsPage() {
               </div>
             ) : (
               <>
-                <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--line)" }}>
-                  <table className="w-full text-sm">
+                <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--line)", overflowX: "auto" }}>
+                  <table className="w-full text-sm" style={{ minWidth: 520 }}>
                     <thead>
                       <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--line)" }}>
                         <th className="px-5 py-3 text-start font-bold" style={{ color: "var(--ink-2)" }}>
