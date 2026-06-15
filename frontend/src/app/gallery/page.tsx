@@ -126,6 +126,7 @@ function ImageModal({ item, onClose }: { item: PublicItem; onClose: () => void }
 export default function GalleryPage() {
   return (
     <CategoryScreen
+      categoryName="صور / Images"
       mediaType={2}
       icon="🖼️"
       title="صور"

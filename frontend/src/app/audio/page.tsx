@@ -131,6 +131,7 @@ function AudioModal({ item, onClose }: { item: PublicItem; onClose: () => void }
 export default function AudioPage() {
   return (
     <CategoryScreen
+      categoryName="السماع / Audio"
       mediaType={3}
       icon="🎧"
       title="السماع"
