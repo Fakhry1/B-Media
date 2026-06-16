@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import { getContents, STATUS_LABEL_AR, STATUS_LABEL_EN, STATUS_COLOR, type ContentListItem, type ContentStatus } from "@/lib/contents";
 import { useLang } from "@/lib/LangContext";
 import { isLoggedIn } from "@/lib/auth";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const STATUSES: ContentStatus[] = [
   "Draft","ContentReview","LanguageReview","MediaQualityReview","FinalApproval","Published","Rejected","Scheduled","Archived",
@@ -39,6 +40,7 @@ export default function ContentsPage() {
   const [items, setItems] = useState<ContentListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [status, setStatus] = useState<ContentStatus | "">("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -47,11 +49,11 @@ export default function ContentsPage() {
 
   const load = useCallback(() => {
     setLoading(true); setError("");
-    getContents({ page, pageSize: 12, search: search || undefined, status: status || undefined })
+    getContents({ page, pageSize: 12, search: debouncedSearch || undefined, status: status || undefined })
       .then(r => { setItems(r.items); setTotalPages(r.totalPages); setTotalCount(r.totalCount); })
       .catch(() => setError(lang === "ar" ? "تعذّر تحميل المحتوى" : "Failed to load content"))
       .finally(() => setLoading(false));
-  }, [page, search, status, lang]);
+  }, [page, debouncedSearch, status, lang]);
 
   useEffect(() => { load(); }, [load]);
 

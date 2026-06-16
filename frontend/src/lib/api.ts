@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost:44344";
+import { API_BASE, REQUEST_TIMEOUT_MS } from "./config";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -19,14 +19,23 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("bmedia_token") : null;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: options.signal ?? controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -36,7 +45,6 @@ export async function apiFetch<T>(
       message = json.detail ?? json.title ?? json.message ?? text;
     } catch {}
 
-    // Token expired or invalid — clear it so future requests don't keep sending it
     if (res.status === 401 && token) {
       clearAuthToken();
       if (typeof window !== "undefined") window.location.href = "/login";
