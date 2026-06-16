@@ -117,7 +117,7 @@ export default function Header() {
               <div style={{ width: 1, height: 20, background: "var(--line)", margin: "0 4px" }} />
 
               {/* Secondary links */}
-              {[{ href: "/categories", label: t.categories }, { href: "/contents", label: t.contents }].map((l) => (
+              {[{ href: "/categories", label: t.categories }, { href: "/contents", label: t.contents }, { href: "/users", label: lang === "ar" ? "المستخدمون" : "Users" }].map((l) => (
                 <a key={l.href} href={l.href}
                   className="px-3 py-2 rounded-xl text-sm font-medium transition-all"
                   style={{ color: "var(--muted)" }}
@@ -256,7 +256,7 @@ export default function Header() {
           <div style={{ height: 1, background: "var(--line)", margin: "8px 0" }} />
 
           {/* Secondary links */}
-          {[{ href: "/categories", label: t.categories }, { href: "/contents", label: t.contents }].map((l) => (
+          {[{ href: "/categories", label: t.categories }, { href: "/contents", label: t.contents }, { href: "/users", label: lang === "ar" ? "المستخدمون" : "Users" }].map((l) => (
             <a key={l.href} href={l.href} onClick={() => setDrawerOpen(false)}
               className="px-4 py-3 rounded-xl text-sm font-medium" style={{ color: "var(--ink)" }}>
               {l.label}
