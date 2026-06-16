@@ -16,26 +16,58 @@ function fmtDate(iso: string | null) {
 
 /* ─── Image Card — Unsplash style ────────────────────────── */
 function ImageCard({ item, index, onClick }: { item: PublicItem; index: number; onClick: () => void }) {
-  const [hover, setHover] = useState(false);
-  const [dl,    setDl]    = useState(false);
-  const c = accent(item.title);
+  const [hover,      setHover]      = useState(false);
+  const [dl,         setDl]         = useState(false);
+  const [imgUrl,     setImgUrl]     = useState<string | null>(item.thumbnailUrl);
+  const [imgLoading, setImgLoading] = useState(!item.thumbnailUrl);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const c     = accent(item.title);
   const ratio = RATIOS[index % RATIOS.length];
+
+  /* Auto-fetch signed URL when card enters viewport and no thumbnail */
+  useEffect(() => {
+    if (item.thumbnailUrl) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) return;
+      obs.disconnect();
+      const ctrl = new AbortController();
+      fetchPublicDetail(item.id, ctrl.signal)
+        .then(async d => {
+          const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image") && x.isPrimary)
+            ?? d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image"));
+          if (!a) { setImgLoading(false); return; }
+          const s = await fetchSignedUrl(a.id, ctrl.signal);
+          setImgUrl(s.url);
+          setImgLoading(false);
+        })
+        .catch(e => { if (e.name !== "AbortError") setImgLoading(false); });
+    }, { threshold: 0.05 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [item.id, item.thumbnailUrl]);
 
   async function handleDownload(e: MouseEvent) {
     e.stopPropagation();
     setDl(true);
     try {
-      const d = await fetchPublicDetail(item.id);
-      const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image") && x.isPrimary)
-        ?? d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image"));
-      if (!a) return;
-      const s = await fetchSignedUrl(a.id);
-      await downloadBlob(s.url, item.title + ".jpg");
+      if (imgUrl && !imgUrl.startsWith("blob")) {
+        await downloadBlob(imgUrl, item.title + ".jpg");
+      } else {
+        const d = await fetchPublicDetail(item.id);
+        const a = d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image") && x.isPrimary)
+          ?? d.mediaAssets.find(x => x.mediaType.toLowerCase().includes("image"));
+        if (!a) return;
+        const s = await fetchSignedUrl(a.id);
+        await downloadBlob(s.url, item.title + ".jpg");
+      }
     } finally { setDl(false); }
   }
 
   return (
-    <div className="gl-card"
+    <div className="gl-card" ref={cardRef}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {/* Thumbnail */}
       <div onClick={onClick} style={{
@@ -43,19 +75,37 @@ function ImageCard({ item, index, onClick }: { item: PublicItem; index: number; 
         borderRadius: 12, overflow: "hidden",
         cursor: "zoom-in", background: `linear-gradient(135deg,${c}22,${c}44)`,
       }}>
-        {item.thumbnailUrl
-          ? <img src={item.thumbnailUrl} alt={item.title} loading="lazy"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
-                objectFit: "cover",
-                transform: hover ? "scale(1.06)" : "scale(1)", transition: "transform .5s ease" }} />
-          : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <path d="M21 15l-5-5L5 21"/>
-              </svg>
-            </div>
-        }
+        {/* Loading shimmer */}
+        {imgLoading && (
+          <div className="animate-pulse" style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(135deg,${c}18,${c}33)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%",
+              border: `2px solid ${c}66`, borderTopColor: c,
+              animation: "gl-spin 1s linear infinite" }} />
+          </div>
+        )}
+
+        {/* Actual image */}
+        {imgUrl && (
+          <img src={imgUrl} alt={item.title} loading="lazy"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
+              objectFit: "cover",
+              transform: hover ? "scale(1.06)" : "scale(1)", transition: "transform .5s ease" }} />
+        )}
+
+        {/* No image + not loading */}
+        {!imgUrl && !imgLoading && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
+          </div>
+        )}
 
         {/* Hover overlay — gradient + info */}
         <div style={{
@@ -291,7 +341,7 @@ function Lightbox({ item, items, onClose, onNavigate }: {
               userSelect: "none", WebkitUserDrag: "none",
               borderRadius: zoom === 1 ? 10 : 0,
               boxShadow: zoom === 1 ? "0 24px 80px rgba(0,0,0,.8)" : "none",
-            } as React.CSSProperties}
+            } as import("react").CSSProperties}
           />
         )}
 
@@ -340,14 +390,14 @@ function Lightbox({ item, items, onClose, onNavigate }: {
 }
 
 /* ── Icon button style ── */
-const iconBtn: React.CSSProperties = {
+const iconBtn: import("react").CSSProperties = {
   width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,.2)",
   background: "rgba(255,255,255,.08)", color: "#fff", cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
   transition: "background .15s", flexShrink: 0,
 };
 
-const navBtn: React.CSSProperties = {
+const navBtn: import("react").CSSProperties = {
   position: "absolute", top: "50%", transform: "translateY(-50%)", zIndex: 5,
   width: 48, height: 48, borderRadius: "50%",
   border: "1px solid rgba(255,255,255,.2)",
