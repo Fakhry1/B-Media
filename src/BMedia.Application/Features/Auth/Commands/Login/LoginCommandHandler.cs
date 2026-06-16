@@ -1,6 +1,4 @@
-using System.Security.Claims;
 using BMedia.Application.Common.Models;
-using BMedia.Domain.Enums;
 using BMedia.Infrastructure.Persistence;
 using BMedia.Infrastructure.Services.Auth;
 using MediatR;
@@ -55,17 +53,16 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
         user.LastLoginIp = request.IpAddress;
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        var permissions = user.UserRoles.SelectMany(ur => ur.Role.RolePermissions).Select(rp => rp.Permission.Name).Distinct().ToList();
+        var permissions = user.UserRoles
+            .SelectMany(ur => ur.Role.RolePermissions)
+            .Select(rp => rp.Permission.Name)
+            .Distinct()
+            .ToList();
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-            new("preferred_username", user.Username)
-        };
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-        claims.AddRange(permissions.Select(p => new Claim("permission", p)));
+        var claims = ClaimsFactory.BuildClaims(
+            user.Id, user.Email, user.Username,
+            user.FirstName, user.LastName,
+            roles, permissions);
 
         var accessToken = _jwtService.GenerateAccessToken(claims);
         var refreshToken = _jwtService.GenerateRefreshToken();

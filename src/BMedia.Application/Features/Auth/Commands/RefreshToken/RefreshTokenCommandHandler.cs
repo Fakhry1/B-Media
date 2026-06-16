@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using BMedia.Application.Common.Models;
 using BMedia.Application.Features.Auth.Commands.Login;
 using BMedia.Infrastructure.Persistence;
@@ -24,7 +23,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
     public async Task<Result<LoginResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var principal = _jwtService.ValidateToken(request.AccessToken);
+        // Access token is expired by design here — only verify signature and claims.
+        var principal = _jwtService.ValidateExpiredToken(request.AccessToken);
         if (principal is null) return Result<LoginResult>.Unauthorized("Invalid access token");
 
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -50,17 +50,16 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         storedToken.RevokedReason = "Replaced by new token";
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        var permissions = user.UserRoles.SelectMany(ur => ur.Role.RolePermissions).Select(rp => rp.Permission.Name).Distinct().ToList();
+        var permissions = user.UserRoles
+            .SelectMany(ur => ur.Role.RolePermissions)
+            .Select(rp => rp.Permission.Name)
+            .Distinct()
+            .ToList();
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-            new("preferred_username", user.Username)
-        };
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-        claims.AddRange(permissions.Select(p => new Claim("permission", p)));
+        var claims = ClaimsFactory.BuildClaims(
+            user.Id, user.Email, user.Username,
+            user.FirstName, user.LastName,
+            roles, permissions);
 
         var newAccessToken = _jwtService.GenerateAccessToken(claims);
         var newRefreshToken = _jwtService.GenerateRefreshToken();

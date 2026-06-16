@@ -21,7 +21,10 @@ public interface IJwtService
 {
     string GenerateAccessToken(IEnumerable<Claim> claims);
     string GenerateRefreshToken();
+    /// <summary>Validates an active (non-expired) token. Returns null if invalid or expired.</summary>
     ClaimsPrincipal? ValidateToken(string token);
+    /// <summary>Validates signature and claims of an expired token — used only during refresh-token rotation.</summary>
+    ClaimsPrincipal? ValidateExpiredToken(string token);
 }
 
 public class JwtService : IJwtService
@@ -64,6 +67,16 @@ public class JwtService : IJwtService
     }
 
     public ClaimsPrincipal? ValidateToken(string token)
+        => ValidateTokenCore(token, validateLifetime: true);
+
+    /// <summary>
+    /// Used ONLY for refresh-token rotation: the access token is intentionally expired,
+    /// but we still need to verify its signature and extract claims from it.
+    /// </summary>
+    public ClaimsPrincipal? ValidateExpiredToken(string token)
+        => ValidateTokenCore(token, validateLifetime: false);
+
+    private ClaimsPrincipal? ValidateTokenCore(string token, bool validateLifetime)
     {
         try
         {
@@ -78,7 +91,7 @@ public class JwtService : IJwtService
                 ValidIssuer = _settings.Issuer,
                 ValidateAudience = true,
                 ValidAudience = _settings.Audience,
-                ValidateLifetime = false,
+                ValidateLifetime = validateLifetime,
                 ClockSkew = TimeSpan.Zero
             }, out _);
 

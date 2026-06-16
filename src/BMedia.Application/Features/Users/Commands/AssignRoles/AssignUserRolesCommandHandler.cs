@@ -27,25 +27,32 @@ public class AssignUserRolesCommandHandler : IRequestHandler<AssignUserRolesComm
         if (user is null)
             return Result<bool>.NotFound("User not found");
 
-        _db.UserRoles.RemoveRange(user.UserRoles);
+        var requestedIds = request.RoleIds?.ToHashSet() ?? [];
 
-        if (request.RoleIds?.Any() == true)
-        {
-            var validRoleIds = await _db.Roles
-                .Where(r => request.RoleIds.Contains(r.Id))
+        // Validate that all requested IDs actually exist.
+        var validRoleIds = requestedIds.Count > 0
+            ? (await _db.Roles
+                .Where(r => requestedIds.Contains(r.Id))
                 .Select(r => r.Id)
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken)).ToHashSet()
+            : [];
 
-            foreach (var roleId in validRoleIds)
+        var currentIds = user.UserRoles.Select(ur => ur.RoleId).ToHashSet();
+
+        // Remove only roles that are no longer in the requested set.
+        var toRemove = user.UserRoles.Where(ur => !validRoleIds.Contains(ur.RoleId)).ToList();
+        _db.UserRoles.RemoveRange(toRemove);
+
+        // Add only roles not already assigned.
+        foreach (var roleId in validRoleIds.Where(id => !currentIds.Contains(id)))
+        {
+            _db.UserRoles.Add(new UserRole
             {
-                _db.UserRoles.Add(new UserRole
-                {
-                    UserId = user.Id,
-                    RoleId = roleId,
-                    AssignedAt = DateTime.UtcNow,
-                    AssignedBy = _currentUser.UserId
-                });
-            }
+                UserId = user.Id,
+                RoleId = roleId,
+                AssignedAt = DateTime.UtcNow,
+                AssignedBy = _currentUser.UserId
+            });
         }
 
         user.UpdatedAt = DateTime.UtcNow;

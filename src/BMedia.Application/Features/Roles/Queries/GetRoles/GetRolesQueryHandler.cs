@@ -13,9 +13,10 @@ public class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, Result<IEnume
 
     public async Task<Result<IEnumerable<RoleDto>>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
     {
+        // No Include needed: EF Core translates r.UserRoles.Count in the Select projection
+        // to a SQL COUNT subquery, avoiding loading all UserRole rows.
         var query = _db.Roles
             .AsNoTracking()
-            .Include(r => r.UserRoles)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))

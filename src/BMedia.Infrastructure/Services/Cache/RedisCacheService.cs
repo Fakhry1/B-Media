@@ -38,9 +38,11 @@ public class RedisCacheService : ICacheService
 
     public Task RemoveByPatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
-        // Pattern-based removal requires direct Redis connection via IConnectionMultiplexer
-        // This is a simplified implementation; production would use SCAN command
-        return Task.CompletedTask;
+        // Requires IConnectionMultiplexer + SCAN command — not available via IDistributedCache.
+        // Inject IConnectionMultiplexer directly when this is needed in production.
+        throw new NotSupportedException(
+            "Pattern-based cache invalidation requires a direct Redis connection (IConnectionMultiplexer). " +
+            "Implement via SCAN + DEL pipeline when needed.");
     }
 
     public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiry = null, CancellationToken cancellationToken = default)

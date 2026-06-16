@@ -9,12 +9,13 @@ using BMedia.Application.Features.Users.Queries.GetUsers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.ComponentModel.DataAnnotations;
 
 namespace BMedia.API.Controllers.v1;
 
-/// <summary>User management.</summary>
+/// <summary>User management — Administrator role required.</summary>
 [ApiVersion("1.0")]
-[Authorize]
+[Authorize(Roles = "Administrator")]
 [EnableRateLimiting("api")]
 public class UsersController : BaseApiController
 {
@@ -22,8 +23,8 @@ public class UsersController : BaseApiController
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery][Range(1, int.MaxValue)] int page = 1,
+        [FromQuery][Range(1, 100)] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] bool? isActive = null,
         CancellationToken cancellationToken = default)

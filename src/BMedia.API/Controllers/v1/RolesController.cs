@@ -9,9 +9,9 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace BMedia.API.Controllers.v1;
 
-/// <summary>Role management.</summary>
+/// <summary>Role management — Administrator role required.</summary>
 [ApiVersion("1.0")]
-[Authorize]
+[Authorize(Roles = "Administrator")]
 [EnableRateLimiting("api")]
 public class RolesController : BaseApiController
 {

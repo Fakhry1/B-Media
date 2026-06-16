@@ -11,6 +11,7 @@ using BMedia.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.ComponentModel.DataAnnotations;
 
 namespace BMedia.API.Controllers.v1;
 
@@ -25,8 +26,8 @@ public class ContentsController : BaseApiController
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery][Range(1, int.MaxValue)] int page = 1,
+        [FromQuery][Range(1, 100)] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] ContentStatus? status = null,
         [FromQuery] Guid? categoryId = null,
@@ -37,7 +38,16 @@ public class ContentsController : BaseApiController
         [FromQuery] bool sortDescending = true,
         [FromQuery] MediaType? mediaType = null,
         CancellationToken cancellationToken = default)
-        => ToActionResult(await Sender.Send(new GetContentsQuery(page, pageSize, search, status, categoryId, subcategoryId, language, isFeatured, sortBy, sortDescending, mediaType), cancellationToken));
+    {
+        // Anonymous callers may only see published content.
+        if (!User.Identity?.IsAuthenticated == true)
+            status ??= ContentStatus.Published;
+
+        return ToActionResult(await Sender.Send(
+            new GetContentsQuery(page, pageSize, search, status, categoryId, subcategoryId,
+                language, isFeatured, sortBy, sortDescending, mediaType),
+            cancellationToken));
+    }
 
     /// <summary>Get a content item by ID.</summary>
     [HttpGet("{id:guid}")]
