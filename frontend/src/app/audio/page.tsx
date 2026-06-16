@@ -348,7 +348,7 @@ export default function AudioPage() {
       {/* ── Hero banner ── */}
       <div style={{
         background: `linear-gradient(150deg,#4c1d95 0%,#5b21b6 40%,#2e1065 100%)`,
-        padding: "48px 0 40px", position: "relative", overflow: "hidden",
+        padding: "clamp(28px,6vw,48px) 0 clamp(24px,5vw,40px)", position: "relative", overflow: "hidden",
       }}>
         {/* Dot texture */}
         <div style={{ position: "absolute", inset: 0, opacity: .06,
@@ -380,10 +380,10 @@ export default function AudioPage() {
               </div>
               <h1 style={{ color: "#fff", margin: 0, fontSize: "clamp(24px,4vw,38px)",
                 fontWeight: 900, lineHeight: 1.1, fontFamily: "'Noto Kufi Arabic',sans-serif" }}>
-                Top Episodes
+                Enjoy Listening
               </h1>
               <p style={{ color: "rgba(255,255,255,.55)", margin: "6px 0 0", fontSize: 14 }}>
-                السماع · اختر ما تريد الاستماع إليه
+                طاب وقت السماع
               </p>
             </div>
           </div>
@@ -472,7 +472,8 @@ export default function AudioPage() {
 
       <style>{`
         .au-wrap { max-width: 860px; margin: 0 auto; padding-inline: 24px; }
-        @media (max-width: 480px) { .au-wrap { padding-inline: 14px; } }
+        @media (max-width: 768px) { .au-wrap { padding-inline: 18px; } }
+        @media (max-width: 480px) { .au-wrap { padding-inline: 16px; } }
       `}</style>
     </div>
   );
