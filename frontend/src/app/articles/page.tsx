@@ -508,9 +508,7 @@ export default function ArticlesPage() {
     CATEGORY, page, undefined, PAGE_SIZE, MEDIA_TYPE
   );
 
-  const featuredItem = items.find(i => i.isFeatured) ?? (items.length > 0 ? items[0] : null);
-  const restItems    = featuredItem ? items.filter(i => i.id !== featuredItem.id) : items;
-  const activeItem   = activeId ? items.find(i => i.id === activeId) ?? null : null;
+  const activeItem = activeId ? items.find(i => i.id === activeId) ?? null : null;
 
   function handlePage(p: number) {
     setPage(p);
@@ -580,15 +578,9 @@ export default function ArticlesPage() {
 
           {/* Loading skeletons */}
           {loading && (
-            <>
-              {/* Featured skeleton */}
-              <div className="animate-pulse" style={{ background: "var(--surface)", borderRadius: 20,
-                border: "1px solid var(--line)", height: 280, marginBottom: 32 }} />
-              {/* Grid skeletons */}
-              <div className="ar-grid">
-                {Array.from({ length: PAGE_SIZE - 1 }).map((_, i) => <SkeletonCard key={i} />)}
-              </div>
-            </>
+            <div className="ar-grid">
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
           )}
 
           {/* Empty */}
@@ -599,41 +591,14 @@ export default function ArticlesPage() {
             </div>
           )}
 
-          {/* Content */}
+          {/* Content — unified grid for all items */}
           {!loading && !error && items.length > 0 && (
-            <>
-              {/* Featured */}
-              {featuredItem && (
-                <div style={{ marginBottom: 36 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)",
-                      textTransform: "uppercase", letterSpacing: ".08em" }}>المقال المميز</span>
-                    <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-                  </div>
-                  <FeaturedCard item={featuredItem} onClick={() => setActiveId(featuredItem.id)} />
-                </div>
-              )}
-
-              {/* Section label for rest */}
-              {restItems.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)",
-                    textTransform: "uppercase", letterSpacing: ".08em" }}>جميع المقالات</span>
-                  <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-                  <span style={{ fontSize: 11, color: "var(--muted-2)" }}>
-                    {restItems.length} مستند
-                  </span>
-                </div>
-              )}
-
-              {/* Grid */}
-              <div className="ar-grid">
-                {restItems.map((item, i) => (
-                  <ArticleCard key={item.id} item={item}
-                    onClick={() => setActiveId(item.id)} />
-                ))}
-              </div>
-            </>
+            <div className="ar-grid">
+              {items.map((item) => (
+                <ArticleCard key={item.id} item={item}
+                  onClick={() => setActiveId(item.id)} />
+              ))}
+            </div>
           )}
 
           <Pagination page={page} totalPages={totalPages} setPage={handlePage} />
@@ -654,8 +619,6 @@ export default function ArticlesPage() {
         @media (max-width: 640px) {
           .ar-grid { grid-template-columns: 1fr; }
           .ar-wrap { padding-left: 16px; padding-right: 16px; }
-          .ar-featured { grid-template-columns: 1fr !important; }
-          .ar-featured .ar-feat-img { min-height: 200px !important; }
         }
         @keyframes ar-spin { to { transform: rotate(360deg); } }
         .ar-spin { animation: ar-spin 1s linear infinite; }
