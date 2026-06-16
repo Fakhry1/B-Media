@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore BMedia.sln
+
+      - name: Build
+        run: dotnet build BMedia.sln --no-restore -c Release
+
+      - name: Run unit tests
+        run: dotnet test tests/BMedia.UnitTests/BMedia.UnitTests.csproj --no-build -c Release --logger "trx;LogFileName=unit-results.trx" --results-directory ./test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results/*.trx

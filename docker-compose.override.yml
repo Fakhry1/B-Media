@@ -9,6 +9,9 @@ services:
       - Jwt__SecretKey=dev-secret-key-change-in-production-min-32-chars!!
       - Jwt__Issuer=bmedia-api-dev
       - Jwt__Audience=bmedia-clients-dev
+      - Seed__AdminPassword=Admin@1234
+      - Storage__Provider=Local
+      - Storage__Local__BaseUrl=http://localhost:5000/files
     ports:
       - "5000:8080"
     volumes:

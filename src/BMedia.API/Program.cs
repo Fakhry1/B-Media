@@ -55,12 +55,19 @@ using (var scope = app.Services.CreateScope())
             var adminRoleId = Guid.Parse("10000000-0000-0000-0000-000000000001");
             var adminUserId = Guid.Parse("A0000000-0000-0000-0000-000000000001");
 
+            var seedPassword = builder.Configuration["Seed:AdminPassword"];
+            if (string.IsNullOrWhiteSpace(seedPassword))
+            {
+                logger.LogWarning("Seed:AdminPassword is not configured — set it via environment variable SEED__ADMINPASSWORD before first run");
+                seedPassword = "ChangeMe@FirstLogin!";
+            }
+
             var admin = new BMedia.Domain.Entities.User
             {
                 Id = adminUserId,
                 Username = "admin",
                 Email = "admin@bmedia.io",
-                PasswordHash = hasher.Hash("Admin@1234"),
+                PasswordHash = hasher.Hash(seedPassword),
                 FirstName = "Admin",
                 LastName = "User",
                 IsActive = true,
@@ -76,7 +83,7 @@ using (var scope = app.Services.CreateScope())
 
             db.Users.Add(admin);
             await db.SaveChangesAsync();
-            logger.LogInformation("Default admin user seeded — Email: admin@bmedia.io / Password: Admin@1234");
+            logger.LogInformation("Default admin user seeded — Email: admin@bmedia.io");
         }
     }
     catch (Exception ex)
@@ -87,16 +94,19 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Swagger — always enabled so it is reachable during development regardless of HTTPS cert trust
-app.UseSwagger();
-app.UseSwaggerUI(opt =>
+// Swagger — disabled in Production; accessible at /swagger in Development/Staging
+if (!app.Environment.IsProduction())
 {
-    opt.SwaggerEndpoint("/swagger/v1/swagger.json", "BMedia API v1");
-    opt.RoutePrefix = "swagger";          // accessible at /swagger
-    opt.DocumentTitle = "BMedia API";
-    opt.DisplayRequestDuration();
-    opt.EnableDeepLinking();
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(opt =>
+    {
+        opt.SwaggerEndpoint("/swagger/v1/swagger.json", "BMedia API v1");
+        opt.RoutePrefix = "swagger";
+        opt.DocumentTitle = "BMedia API";
+        opt.DisplayRequestDuration();
+        opt.EnableDeepLinking();
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {
@@ -128,21 +138,6 @@ app.UseSerilogRequestLogging(opt =>
 app.UseCors("DefaultCors");
 app.UseRateLimiter();
 app.UseAuthentication();
-
-// Diagnostic: log which endpoint is matched and its auth metadata
-app.Use(async (context, next) =>
-{
-    var endpoint = context.GetEndpoint();
-    if (endpoint is not null)
-    {
-        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("EndpointDiag");
-        var hasAllowAnon = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() is not null;
-        var hasAuthorize = endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>() is not null;
-        logger.LogInformation("DIAG Endpoint={Name} AllowAnonymous={Anon} HasAuthorize={Auth}",
-            endpoint.DisplayName, hasAllowAnon, hasAuthorize);
-    }
-    await next();
-});
 
 app.UseAuthorization();
 

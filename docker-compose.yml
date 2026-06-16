@@ -16,9 +16,16 @@ services:
       - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
       - ConnectionStrings__Redis=${REDIS_CONNECTION_STRING}
       - Jwt__SecretKey=${JWT_SECRET_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      - Storage__Local__BaseUrl=http://localhost:5000/files
+      - Jwt__Issuer=${JWT_ISSUER:-bmedia-api}
+      - Jwt__Audience=${JWT_AUDIENCE:-bmedia-clients}
+      - Seed__AdminPassword=${SEED_ADMIN_PASSWORD}
+      - Storage__Provider=${STORAGE_PROVIDER:-Azure}
+      - Storage__Azure__ConnectionString=${AZURE_STORAGE_CONNECTION_STRING}
+      - Storage__Azure__ContainerName=${AZURE_STORAGE_CONTAINER:-bmedia-assets}
+      - Storage__Azure__BaseUrl=${AZURE_STORAGE_BASE_URL}
+      - Cors__AllowedOrigins__0=${FRONTEND_URL:-https://bmedia.io}
+      - Hangfire__Dashboard__Username=${HANGFIRE_USER:-admin}
+      - Hangfire__Dashboard__Password=${HANGFIRE_PASSWORD}
     volumes:
       - bmedia-uploads:/app/uploads
       - bmedia-logs:/app/logs

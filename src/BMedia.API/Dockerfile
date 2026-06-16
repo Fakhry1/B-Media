@@ -25,9 +25,16 @@ RUN dotnet publish "BMedia.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /
 FROM base AS final
 WORKDIR /app
 
-RUN mkdir -p /app/uploads /app/logs && chmod 755 /app/uploads /app/logs
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup --no-create-home appuser && \
+    mkdir -p /app/uploads /app/logs && \
+    chown -R appuser:appgroup /app/uploads /app/logs && \
+    chmod 755 /app/uploads /app/logs
 
 COPY --from=publish /app/publish .
+RUN chown -R appuser:appgroup /app
+
+USER appuser
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
